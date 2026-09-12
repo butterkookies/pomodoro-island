@@ -182,10 +182,10 @@ export function useIslandState(options = {}) {
         function report() {
             const rect = el.getBoundingClientRect();
             window.electronAPI?.updateIslandBounds({
-                left: rect.left - 14,
+                left: rect.left - 20,
                 top: rect.top,
-                right: rect.right + 14,
-                bottom: rect.bottom + 48,
+                right: rect.right + 20,
+                bottom: rect.bottom + 76,
             });
         }
 

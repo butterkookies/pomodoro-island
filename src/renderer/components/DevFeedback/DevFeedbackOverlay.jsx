@@ -28,6 +28,7 @@ export default function DevFeedbackOverlay({
   const [toastText, setToastText] = useState('');
   const [copySuccess, setCopySuccess] = useState(false);
   const [isDockDismissed, setIsDockDismissed] = useState(false);
+  const [isDroppingPin, setIsDroppingPin] = useState(false);
 
   // Island exact pixel bounding rect in window
   const [islandRect, setIslandRect] = useState({ left: 0, top: 0, width: 0, height: 0 });
@@ -60,10 +61,14 @@ export default function DevFeedbackOverlay({
     };
   }, [islandRef, islandState]);
 
-  // Notify parent whether dev interaction is active (to prevent auto-settling to idle)
-  const isInteracting = Boolean(draftPin || editingPin || isDrawerOpen);
+  // Notify parent and Electron main process whether modal/dev interaction is active
+  const isInteracting = Boolean(draftPin || editingPin || isDrawerOpen || isDroppingPin);
   useEffect(() => {
     onActiveChange?.(isInteracting);
+    window.electronAPI?.setModalOpen?.(isInteracting);
+    return () => {
+      window.electronAPI?.setModalOpen?.(false);
+    };
   }, [isInteracting, onActiveChange]);
 
   // Focus textarea when a pin popover opens
@@ -90,7 +95,11 @@ export default function DevFeedbackOverlay({
       }
 
       if (e.key === 'Escape') {
-        if (draftPin || editingPin) {
+        if (isDroppingPin) {
+          setIsDroppingPin(false);
+          setToastText('Pin drop canceled');
+          setTimeout(() => setToastText(''), 1500);
+        } else if (draftPin || editingPin) {
           setDraftPin(null);
           setEditingPin(null);
           setCommentText('');
@@ -102,7 +111,63 @@ export default function DevFeedbackOverlay({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [draftPin, editingPin, isDrawerOpen]);
+  }, [draftPin, editingPin, isDrawerOpen, isDroppingPin]);
+
+  // Click listener for explicit "Drop Pin" mode
+  useEffect(() => {
+    if (!isDroppingPin) return;
+
+    function handlePinDropClick(e) {
+      // Ignore clicks inside our own popovers or dev dock
+      if (e.target.closest(`.${styles.popoverCard}`) ||
+          e.target.closest(`.${styles.devDock}`) ||
+          e.target.closest(`.${styles.drawerCard}`)) {
+        return;
+      }
+
+      const islandEl = islandRef?.current;
+      if (!islandEl) return;
+
+      const rect = islandEl.getBoundingClientRect();
+      const padX = 14;
+      const padY = 14;
+
+      // Check if click was on or directly adjacent to island
+      if (
+        e.clientX < rect.left - padX ||
+        e.clientX > rect.right + padX ||
+        e.clientY < rect.top - 4 ||
+        e.clientY > rect.bottom + padY
+      ) {
+        setIsDroppingPin(false);
+        return;
+      }
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const xPercent = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+      const yPercent = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+
+      const context = detectTargetContext(e.target, islandState, activeTab);
+
+      setIsDroppingPin(false);
+      setEditingPin(null);
+      setCommentText('');
+      setDraftPin({
+        xPercent,
+        yPercent,
+        targetLabel: context.targetLabel,
+        category: context.category,
+        domPath: context.domPath,
+        viewState: islandState,
+        activeTab: islandState === 'expanded' ? activeTab : null,
+      });
+    }
+
+    window.addEventListener('click', handlePinDropClick, true);
+    return () => window.removeEventListener('click', handlePinDropClick, true);
+  }, [isDroppingPin, islandRef, islandState, activeTab]);
 
   // Right-click listener to capture click coordinates and drop pin
   useEffect(() => {
@@ -141,6 +206,7 @@ export default function DevFeedbackOverlay({
 
       const context = detectTargetContext(e.target, islandState, activeTab);
 
+      setIsDroppingPin(false);
       setEditingPin(null);
       setCommentText('');
       setDraftPin({
@@ -163,56 +229,61 @@ export default function DevFeedbackOverlay({
   const handleSaveDraft = useCallback(() => {
     if (!draftPin || !commentText.trim()) return;
 
-    const nextNumber = pins.length > 0
-      ? Math.max(...pins.map(p => p.number || 0)) + 1
-      : 1;
+    setPins(prevPins => {
+      const nextNumber = prevPins.length > 0
+        ? Math.max(...prevPins.map(p => p.number || 0)) + 1
+        : 1;
 
-    const newPin = {
-      id: `pin_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      number: nextNumber,
-      xPercent: draftPin.xPercent,
-      yPercent: draftPin.yPercent,
-      targetLabel: draftPin.targetLabel,
-      category: draftPin.category,
-      domPath: draftPin.domPath,
-      viewState: draftPin.viewState,
-      activeTab: draftPin.activeTab,
-      comment: commentText.trim(),
-      createdAt: new Date().toISOString(),
-    };
+      const newPin = {
+        id: `pin_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        number: nextNumber,
+        xPercent: draftPin.xPercent,
+        yPercent: draftPin.yPercent,
+        targetLabel: draftPin.targetLabel,
+        category: draftPin.category,
+        domPath: draftPin.domPath,
+        viewState: draftPin.viewState,
+        activeTab: draftPin.activeTab,
+        comment: commentText.trim(),
+        createdAt: new Date().toISOString(),
+      };
 
-    const updated = [...pins, newPin];
-    setPins(updated);
-    persistPins(updated);
+      const updated = [...prevPins, newPin];
+      persistPins(updated);
+      setToastText(`Pin #${nextNumber} added`);
+      return updated;
+    });
 
     setDraftPin(null);
     setCommentText('');
-    setToastText(`Pin #${nextNumber} added`);
     setTimeout(() => setToastText(''), 1800);
-  }, [draftPin, commentText, pins]);
+  }, [draftPin, commentText]);
 
   // Update existing pin comment
   const handleUpdatePin = useCallback(() => {
     if (!editingPin || !commentText.trim()) return;
 
-    const updated = pins.map(p =>
-      p.id === editingPin.id ? { ...p, comment: commentText.trim() } : p
-    );
-
-    setPins(updated);
-    persistPins(updated);
+    setPins(prevPins => {
+      const updated = prevPins.map(p =>
+        p.id === editingPin.id ? { ...p, comment: commentText.trim() } : p
+      );
+      persistPins(updated);
+      return updated;
+    });
 
     setEditingPin(null);
     setCommentText('');
     setToastText(`Pin #${editingPin.number} updated`);
     setTimeout(() => setToastText(''), 1800);
-  }, [editingPin, commentText, pins]);
+  }, [editingPin, commentText]);
 
   // Delete a pin
   const handleDeletePin = useCallback((id) => {
-    const updated = pins.filter(p => p.id !== id);
-    setPins(updated);
-    persistPins(updated);
+    setPins(prevPins => {
+      const updated = prevPins.filter(p => p.id !== id);
+      persistPins(updated);
+      return updated;
+    });
 
     if (editingPin?.id === id) {
       setEditingPin(null);
@@ -220,11 +291,10 @@ export default function DevFeedbackOverlay({
     }
     setToastText('Pin removed');
     setTimeout(() => setToastText(''), 1800);
-  }, [pins, editingPin]);
+  }, [editingPin]);
 
   // Clear all pins
   const handleClearAll = useCallback(() => {
-    if (pins.length === 0) return;
     if (window.confirm('Are you sure you want to clear all dev feedback pins?')) {
       setPins([]);
       persistPins([]);
@@ -234,7 +304,7 @@ export default function DevFeedbackOverlay({
       setToastText('All pins cleared');
       setTimeout(() => setToastText(''), 1800);
     }
-  }, [pins.length]);
+  }, []);
 
   // Copy all pins formatted as an AI prompt to clipboard
   const handleCopyPrompt = useCallback(async () => {
@@ -302,6 +372,26 @@ export default function DevFeedbackOverlay({
 
   return (
     <div className={styles.overlayContainer}>
+      {/* ── Drop Pin Interactive Mode Indicator ───────────── */}
+      {isDroppingPin && islandRect.width > 0 && (
+        <div
+          className={styles.droppingPinCanvas}
+          style={{
+            left: islandRect.left,
+            top: islandRect.top,
+            width: islandRect.width,
+            height: islandRect.height,
+            borderRadius:
+              islandState === 'idle'
+                ? '0 0 12px 12px'
+                : islandState === 'compact'
+                ? '0 0 20px 20px'
+                : '0 0 26px 26px',
+          }}
+          title="Click anywhere on the island to drop a feedback pin"
+        />
+      )}
+
       {/* ── Rendered Visual Pins on Island Surface ──────────── */}
       {islandRect.width > 0 && (
         <div
@@ -478,10 +568,23 @@ export default function DevFeedbackOverlay({
             type="button"
             className={styles.dockBadgeBtn}
             onClick={() => setIsDrawerOpen(true)}
-            title="View all recorded feedback pins"
+            title={`View all ${pins.length} feedback pins (${visiblePins.length} on this view)`}
           >
             <span>Pins</span>
             <span className={styles.dockBadgePill}>{pins.length}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`${styles.dockActionBtn} ${isDroppingPin ? styles.dockActionBtnActive : ''}`}
+            onClick={() => {
+              setIsDroppingPin(prev => !prev);
+              setToastText(!isDroppingPin ? 'Click anywhere on the island to drop a pin' : '');
+              if (!isDroppingPin) setTimeout(() => setToastText(''), 3000);
+            }}
+            title="Click to drop a new feedback pin on the island (or right-click anytime)"
+          >
+            {isDroppingPin ? '✕ Cancel' : '＋ Drop Pin'}
           </button>
 
           <button
@@ -555,6 +658,19 @@ export default function DevFeedbackOverlay({
                 ✕
               </button>
             </div>
+
+            <button
+              type="button"
+              className={styles.drawerAddBtn}
+              onClick={() => {
+                setIsDrawerOpen(false);
+                setIsDroppingPin(true);
+                setToastText('Click anywhere on the island to drop a pin');
+                setTimeout(() => setToastText(''), 3000);
+              }}
+            >
+              ＋ Drop New Feedback Pin
+            </button>
 
             <div className={styles.drawerList}>
               {pins.length === 0 ? (

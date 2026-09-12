@@ -9,11 +9,15 @@ module.exports = {
   makers: [
     {
       name: '@electron-forge/maker-squirrel',
-      config: {},
+      config: {
+        name: 'pomodoro_island',
+        authors: 'butterkookies',
+        description: 'Pomodoro Island — A tactile, notch-anchored focus bar inspired by Apple Dynamic Island',
+      },
     },
     {
       name: '@electron-forge/maker-zip',
-      platforms: ['darwin'],
+      platforms: ['darwin', 'win32'],
     },
     {
       name: '@electron-forge/maker-deb',

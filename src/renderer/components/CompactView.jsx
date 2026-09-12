@@ -22,6 +22,7 @@ export default function CompactView({
   isRunning,
   nextReminder,
   activeTask,
+  nowPlaying,
   onPause,
   onResume,
   onSkip,
@@ -128,9 +129,9 @@ export default function CompactView({
               height="11"
               viewBox="0 0 11 11"
               fill="currentColor"
-              style={{ transform: 'translateX(1.5px)' }}
+              style={{ transform: 'translateX(0.5px)' }}
             >
-              <path d="M 2 1 C 2 0.5 2.6 0.2 3.1 0.5 L 9.5 4.9 C 9.9 5.2 9.9 5.8 9.5 6.1 L 3.1 10.5 C 2.6 10.8 2 10.5 2 10 Z" />
+              <path d="M 3 1.2 C 3 0.65 3.6 0.3 4.1 0.6 L 9.4 4.85 C 9.85 5.15 9.85 5.85 9.4 6.15 L 4.1 10.4 C 3.6 10.7 3 10.35 3 9.8 Z" />
             </svg>
           )}
         </button>
@@ -163,11 +164,59 @@ export default function CompactView({
           className={styles.progressTrack}
           title={`Remaining: ${Math.round(remainingPct * 100)}%`}
         >
-          <motion.div
+          <div
             className={styles.progressFill}
             style={{ width: `${remainingPct * 100}%` }}
           />
         </div>
+
+        {/* Active Focus Goal Glance Pill */}
+        {activeTask?.trim() && (
+          <div
+            className={styles.taskGlancePill}
+            title={`Focus Goal: ${activeTask.trim()}`}
+          >
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={styles.taskGlanceIcon}
+            >
+              <circle cx="12" cy="12" r="9" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            <span className={styles.taskGlanceText}>{activeTask.trim()}</span>
+          </div>
+        )}
+
+        {/* Active Now Playing Music Pill (Spotify / System Audio) */}
+        {nowPlaying?.isPlaying && nowPlaying?.title && (
+          <div
+            className={styles.musicGlancePill}
+            title={`Now Playing: ${nowPlaying.title}${nowPlaying.artist ? ` by ${nowPlaying.artist}` : ''}`}
+          >
+            {nowPlaying.artwork ? (
+              <img
+                src={nowPlaying.artwork}
+                alt=""
+                className={styles.musicThumb}
+              />
+            ) : null}
+            <span className={styles.equalizerWave}>
+              <span className={styles.eqBar} />
+              <span className={styles.eqBar} />
+              <span className={styles.eqBar} />
+            </span>
+            <span className={styles.musicGlanceText}>
+              {nowPlaying.title}{nowPlaying.artist ? ` • ${nowPlaying.artist}` : ''}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* ── Right: Skip Tactile 3D Button with Hold-to-Reset ── */}

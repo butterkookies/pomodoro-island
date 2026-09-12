@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   setClickThrough: (value) => ipcRenderer.send('set-click-through', value),
+  setModalOpen: (value) => ipcRenderer.send('set-modal-open', value),
   updateIslandBounds: (bounds) => ipcRenderer.send('update-island-bounds', bounds),
   showNotification: (title, body) => ipcRenderer.send('show-notification', { title, body }),
   onTogglePause: (callback) => ipcRenderer.on('toggle-pause', (_event) => callback()),
@@ -16,6 +17,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   quitApp: () => ipcRenderer.send('quit-app'),
   setLoginItem: (openAtLogin) => ipcRenderer.send('set-login-item', openAtLogin),
   getLoginItem: () => ipcRenderer.invoke('get-login-item'),
+  onNowPlaying: (callback) => {
+    const subscription = (_event, data) => callback(data);
+    ipcRenderer.on('now-playing-update', subscription);
+    return () => ipcRenderer.removeListener('now-playing-update', subscription);
+  },
+  getNowPlaying: () => ipcRenderer.invoke('get-now-playing'),
+  mediaControl: (action) => ipcRenderer.send('media-control', action),
   setTopMargin: (margin) => ipcRenderer.send('set-top-margin', margin),
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
   store: {

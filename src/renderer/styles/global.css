@@ -47,10 +47,10 @@ body {
 
 /* ── Apple Design Tokens (Elevated Obsidian Glass) ───── */
 :root {
-  /* Translucent Obsidian Glass Materials (#08080a prevents OLED smearing) */
+  /* Pure Pitch Black Materials (desktop LCD — no OLED smearing concern) */
   --island-opacity: 0.95;
-  --pill-bg: rgba(8, 8, 10, var(--island-opacity, 0.95));
-  --pill-bg-expanded: rgba(10, 10, 13, var(--island-opacity, 0.95));
+  --pill-bg: rgba(0, 0, 0, var(--island-opacity, 0.95));
+  --pill-bg-expanded: rgba(0, 0, 0, var(--island-opacity, 0.95));
   --pill-border: rgba(255, 255, 255, 0.08);
   --pill-border-hover: rgba(255, 255, 255, 0.14);
   --pill-specular: rgba(255, 255, 255, 0.18);

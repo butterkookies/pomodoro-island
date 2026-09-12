@@ -5,8 +5,9 @@ export const DEFAULT_NOTCH_SETTINGS = {
   idleEarHeight: 9,
   activeEarWidth: 15,
   activeEarHeight: 14,
-  idleHeight: 30,
+  idleHeight: 32,
   idleBottomRadius: 12,
+  idleDisplayMode: 'both', // 'both' | 'time' | 'bar'
 };
 
 export function useNotchSettings() {
@@ -25,7 +26,9 @@ export function useNotchSettings() {
   const updateSetting = useCallback((key, value) => {
     setSettingsState((prev) => ({
       ...prev,
-      [key]: Number(value),
+      [key]: typeof value === 'number' || (!isNaN(Number(value)) && typeof value !== 'string')
+        ? Number(value)
+        : value,
     }));
   }, []);
 

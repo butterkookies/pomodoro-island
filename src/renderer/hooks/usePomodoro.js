@@ -19,7 +19,11 @@ export function usePomodoro() {
   const [durations, setDurationsState] = useState(() => {
     const stored = window.electronAPI?.store?.get('durations');
     if (stored && typeof stored.FOCUS === 'number' && typeof stored.SHORT_BREAK === 'number' && typeof stored.LONG_BREAK === 'number') {
-      return stored;
+      // Validate stored values - reset if corrupted by the 120m clamping bug
+      const isCorrupted = stored.SHORT_BREAK >= 7200000 || stored.SHORT_BREAK > 30 * 60 * 1000 || stored.LONG_BREAK > 60 * 60 * 1000;
+      if (!isCorrupted) {
+        return stored;
+      }
     }
     return {
       FOCUS: DURATIONS.FOCUS,
@@ -66,9 +70,17 @@ export function usePomodoro() {
     setSessionCount(0);
   }, []);
 
-  const setDuration = useCallback((key, minutes) => {
-    const ms = Math.max(1, Math.min(120, minutes)) * 60 * 1000;
-    setDurationsState(prev => ({ ...prev, [key]: ms }));
+  const setPhase = useCallback((newPhase) => {
+    if (newPhase === 'FOCUS' || newPhase === 'SHORT_BREAK' || newPhase === 'LONG_BREAK') {
+      setState(newPhase);
+    }
+  }, []);
+
+  const setDuration = useCallback((key, value) => {
+    // If value >= 1000, treat as milliseconds; otherwise treat as minutes
+    const ms = value >= 1000 ? value : value * 60 * 1000;
+    const clampedMs = Math.max(60 * 1000, Math.min(120 * 60 * 1000, ms));
+    setDurationsState(prev => ({ ...prev, [key]: clampedMs }));
   }, []);
 
   return {
@@ -77,6 +89,7 @@ export function usePomodoro() {
     config: getConfig(state, durations),
     durations,
     setDuration,
+    setPhase,
     next,
     reset,
     autoStartBreaks,

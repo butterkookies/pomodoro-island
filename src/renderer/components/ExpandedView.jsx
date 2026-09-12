@@ -20,28 +20,28 @@ function getTabIndex(tab) {
   return idx >= 0 ? idx : 0;
 }
 
-// Directional sliding spring transition (stiffness: 500, damping: 38)
+// Clean spring crossfade transition (avoids blank-frame flicker during tab navigation)
 const tabVariants = {
-  enter: (dir) => ({
-    x: dir > 0 ? 14 : -14,
+  enter: {
     opacity: 0,
-  }),
+    y: 3,
+  },
   center: {
-    x: 0,
     opacity: 1,
+    y: 0,
     transition: {
-      x: { type: 'spring', stiffness: 500, damping: 38 },
-      opacity: { duration: 0.16, ease: 'easeOut' },
+      duration: 0.14,
+      ease: [0.16, 1, 0.3, 1],
     },
   },
-  exit: (dir) => ({
-    x: dir > 0 ? -14 : 14,
+  exit: {
     opacity: 0,
+    y: -2,
     transition: {
-      x: { type: 'spring', stiffness: 500, damping: 38 },
-      opacity: { duration: 0.10, ease: 'easeIn' },
+      duration: 0.07,
+      ease: 'easeIn',
     },
-  }),
+  },
 };
 
 export default function ExpandedView({
@@ -60,6 +60,7 @@ export default function ExpandedView({
   onReset,
   durations = {},
   onSetDuration,
+  onSetPhase,
   autoStartBreaks,
   onSetAutoStartBreaks,
   autoStartFocus,
@@ -77,12 +78,18 @@ export default function ExpandedView({
   onClearCompletedNotes,
   // Stats
   stats,
+  // Now playing music
+  nowPlaying,
   // Wellness
   wellnessPrompt,
   // Custom timers
   customTimers = [],
   onAddCustomTimer,
   onRemoveCustomTimer,
+  // Notch settings
+  notchSettings = {},
+  onUpdateNotchSetting,
+  onResetNotchSettings,
 }) {
   const [newNoteText, setNewNoteText] = useState('');
   const [customTimerName, setCustomTimerName] = useState('');
@@ -319,10 +326,9 @@ export default function ExpandedView({
 
       {/* ── Content View Area ──────────────────────────────── */}
       <div className={styles.viewContent}>
-        <AnimatePresence mode="wait" custom={direction} initial={false}>
+        <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={activeTab}
-            custom={direction}
             variants={tabVariants}
             initial="enter"
             animate="center"
@@ -426,7 +432,7 @@ export default function ExpandedView({
                 { label: '5m', ms: 5 * 60 * 1000, phase: 'SHORT_BREAK' },
                 { label: '15m', ms: 15 * 60 * 1000, phase: 'LONG_BREAK' },
               ].map((p) => {
-                const isActive = durations[p.phase] === p.ms;
+                const isActive = pomodoroState === p.phase && durations[p.phase] === p.ms;
                 return (
                   <button
                     key={p.label}
@@ -434,6 +440,9 @@ export default function ExpandedView({
                     onClick={() => {
                       if (soundEnabled) playUiClick();
                       onSetDuration?.(p.phase, p.ms);
+                      if (pomodoroState !== p.phase) {
+                        onSetPhase?.(p.phase);
+                      }
                     }}
                   >
                     {p.label}
@@ -618,6 +627,90 @@ export default function ExpandedView({
         {/* TAB 3: AMBIENT AUDIO */}
         {activeTab === 'audio' && (
           <div className={styles.audioTab}>
+            {/* Live Now Playing Track (Spotify / System Audio) */}
+            {nowPlaying?.isPlaying && nowPlaying?.title && (
+              <div className={styles.nowPlayingCard}>
+                <div className={styles.nowPlayingTrackInfo}>
+                  {nowPlaying.artwork ? (
+                    <img
+                      src={nowPlaying.artwork}
+                      alt=""
+                      className={styles.nowPlayingThumb}
+                    />
+                  ) : (
+                    <div className={styles.nowPlayingThumbPlaceholder}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className={styles.nowPlayingMeta}>
+                    <span className={styles.nowPlayingTitle} title={nowPlaying.title}>
+                      {nowPlaying.title}
+                    </span>
+                    <div className={styles.nowPlayingSubtitleRow}>
+                      <div className={styles.nowPlayingEqualizer}>
+                        <span />
+                        <span />
+                        <span />
+                      </div>
+                      <span className={styles.nowPlayingArtist} title={nowPlaying.artist}>
+                        {nowPlaying.artist || 'Media Audio'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.nowPlayingControls}>
+                  <button
+                    type="button"
+                    className={styles.mediaMiniBtn}
+                    onClick={() => {
+                      if (soundEnabled) playUiClick();
+                      nowPlaying.prev?.();
+                    }}
+                    title="Previous track"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                      <polygon points="19 20 9 12 19 4 19 20" />
+                      <line x1="5" y1="4" x2="5" y2="20" stroke="currentColor" strokeWidth="2.5" />
+                    </svg>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`${styles.mediaMiniBtn} ${styles.mediaMiniBtnActive}`}
+                    onClick={() => {
+                      if (soundEnabled) playUiClick();
+                      nowPlaying.playPause?.();
+                    }}
+                    title="Pause / Resume track"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                      <rect x="6" y="4" width="4" height="16" rx="1" />
+                      <rect x="14" y="4" width="4" height="16" rx="1" />
+                    </svg>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={styles.mediaMiniBtn}
+                    onClick={() => {
+                      if (soundEnabled) playUiClick();
+                      nowPlaying.next?.();
+                    }}
+                    title="Next track"
+                  >
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                      <polygon points="5 4 15 12 5 20 5 4" />
+                      <line x1="19" y1="4" x2="19" y2="20" stroke="currentColor" strokeWidth="2.5" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className={styles.flatSection}>
               <div className={styles.sectionHeaderRow}>
                 <span className={styles.sectionTitle}>Soundscapes</span>
@@ -813,6 +906,33 @@ export default function ExpandedView({
                   >
                     +
                   </button>
+                </div>
+              </div>
+
+              <div className={styles.flatRow}>
+                <span className={styles.flatLabel}>Idle notch display</span>
+                <div className={styles.opacityPresets}>
+                  {[
+                    { id: 'both', label: 'Both' },
+                    { id: 'time', label: 'Time Only' },
+                    { id: 'bar', label: 'Bar Only' },
+                  ].map((opt) => {
+                    const currentMode = notchSettings?.idleDisplayMode ?? 'both';
+                    const isActive = currentMode === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        className={`${styles.presetChipSmall} ${isActive ? styles.presetChipSmallActive : ''}`}
+                        onClick={() => {
+                          if (soundEnabled) playUiClick();
+                          onUpdateNotchSetting?.('idleDisplayMode', opt.id);
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

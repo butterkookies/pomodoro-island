@@ -61,6 +61,7 @@ export default function Island({
   // Settings
   durations,
   onSetDuration,
+  onSetPhase,
   autoStartBreaks,
   onSetAutoStartBreaks,
   autoStartFocus,
@@ -85,6 +86,8 @@ export default function Island({
   onClearCompletedNotes,
   // Stats
   stats,
+  // Now playing music
+  nowPlaying,
   // Wellness
   wellnessPrompt,
   // Notch settings
@@ -98,22 +101,25 @@ export default function Island({
   // Dynamic Island dimensions per state
   function getDims() {
     if (islandState === 'idle') {
-      return { width: 170, height: notchSettings?.idleHeight ?? 30 };
+      const mode = notchSettings?.idleDisplayMode ?? 'both';
+      const baseWidth = mode === 'both' ? 184 : mode === 'bar' ? 124 : 108;
+      const width = nowPlaying?.isPlaying ? baseWidth + (nowPlaying?.artwork ? 44 : 26) : baseWidth;
+      return { width, height: notchSettings?.idleHeight ?? 32 };
     }
     if (islandState === 'compact') {
-      return { width: 430, height: 52 };
+      return { width: nowPlaying?.isPlaying ? 450 : 430, height: 52 };
     }
 
     // Expanded state
     const width = 440;
     if (activeTab === 'tasks') return { width, height: 250 };
-    if (activeTab === 'audio' || activeTab === 'music') return { width, height: 165 };
+    if (activeTab === 'audio' || activeTab === 'music') return { width, height: nowPlaying?.isPlaying ? 230 : 165 };
     if (activeTab === 'stats') return { width, height: 245 };
     if (activeTab === 'settings') return { width, height: 285 };
 
     // Timer tab
     const isBreak = pomodoroState === 'SHORT_BREAK' || pomodoroState === 'LONG_BREAK';
-    return { width, height: isBreak ? 235 : 205 };
+    return { width, height: isBreak ? 260 : 240 };
   }
 
   const dims = getDims();
@@ -214,49 +220,77 @@ export default function Island({
         style={{
           borderRadius: radius,
           background: islandBg,
-          border: `1px solid ${borderColor}`,
+          borderLeft: `1px solid ${borderColor}`,
+          borderRight: `1px solid ${borderColor}`,
+          borderBottom: `1px solid ${borderColor}`,
           borderTop: 'none',
         }}
       >
-        <AnimatePresence initial={false} mode="wait">
-          {islandState === 'idle' && (
-            <motion.div
-              key="idle"
-              className={styles.idleContent}
-              variants={viewVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-            >
-              <div className={styles.idleRow}>
-                <div
-                  className={styles.idleDot}
-                  style={{ background: color }}
-                />
-                <span className={styles.idleDigits}>{mins}</span>
-                <span className={styles.idleColon}>:</span>
-                <span className={styles.idleDigits}>{secs}</span>
-              </div>
-              {(isRunning || percent < 1) && (
-                <div className={styles.idleProgressTrack}>
-                  <motion.div
-                    className={styles.idleProgressBar}
-                    animate={{ width: `${(1 - percent) * 100}%` }}
-                    transition={{ duration: 0.15, ease: 'linear' }}
+        <AnimatePresence initial={false} mode="popLayout">
+          {islandState === 'idle' && (() => {
+            const idleMode = notchSettings?.idleDisplayMode ?? 'both';
+            const showTime = idleMode === 'both' || idleMode === 'time';
+            const showBar = idleMode === 'both' || idleMode === 'bar';
+            const remainingPct = Math.max(0, Math.min(1, percent));
+
+            return (
+              <motion.div
+                key="idle"
+                className={`${styles.idleContent} ${
+                  idleMode === 'both' ? styles.idleContentBoth : styles.idleContentCenter
+                }`}
+                initial={{ opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1, transition: { duration: 0.12, ease: [0.16, 1, 0.3, 1] } }}
+                exit={{ opacity: 0, scale: 0.92, transition: { duration: 0.10, ease: 'easeIn' } }}
+              >
+                {nowPlaying?.isPlaying && nowPlaying?.artwork && (
+                  <img
+                    src={nowPlaying.artwork}
+                    alt=""
+                    className={styles.idleMusicThumb}
+                    title={`Now Playing: ${nowPlaying.title}${nowPlaying.artist ? ` by ${nowPlaying.artist}` : ''}`}
                   />
-                </div>
-              )}
-            </motion.div>
-          )}
+                )}
+                {showTime && (
+                  <div className={styles.idleTimeWrapper}>
+                    <span className={styles.idleDigits}>{mins}</span>
+                    <span className={styles.idleColon}>:</span>
+                    <span className={styles.idleDigits}>{secs}</span>
+                  </div>
+                )}
+                {showBar && (
+                  <div
+                    className={`${styles.idleBarTrack} ${
+                      idleMode === 'bar' ? styles.idleBarTrackCentered : ''
+                    }`}
+                  >
+                    <div
+                      className={styles.idleBarFill}
+                      style={{ width: `${remainingPct * 100}%` }}
+                    />
+                  </div>
+                )}
+                {nowPlaying?.isPlaying && (
+                  <div
+                    className={styles.idleEqualizer}
+                    title={`Now Playing: ${nowPlaying.title}${nowPlaying.artist ? ` by ${nowPlaying.artist}` : ''}`}
+                  >
+                    <span className={styles.idleEqBar} />
+                    <span className={styles.idleEqBar} />
+                    <span className={styles.idleEqBar} />
+                  </div>
+                )}
+              </motion.div>
+            );
+          })()}
 
           {islandState === 'compact' && (
             <motion.div
               key="compact"
               style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}
-              variants={viewVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1, transition: { duration: 0.12, ease: [0.16, 1, 0.3, 1] } }}
+              exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.10, ease: 'easeIn' } }}
             >
               <CompactView
                 timeDisplay={timeDisplay}
@@ -268,6 +302,7 @@ export default function Island({
                 onFinishOvertime={onFinishOvertime}
                 nextReminder={nextReminder}
                 activeTask={activeTask}
+                nowPlaying={nowPlaying}
                 onPause={onPause}
                 onResume={onResume}
                 onSkip={onSkip}
@@ -306,6 +341,7 @@ export default function Island({
                 onAddReminder={onAddReminder}
                 durations={durations}
                 onSetDuration={onSetDuration}
+                onSetPhase={onSetPhase}
                 autoStartBreaks={autoStartBreaks}
                 onSetAutoStartBreaks={onSetAutoStartBreaks}
                 autoStartFocus={autoStartFocus}
@@ -325,6 +361,7 @@ export default function Island({
                 isScratchpadOpen={isScratchpadOpen}
                 onToggleScratchpad={() => setIsScratchpadOpen(!isScratchpadOpen)}
                 stats={stats}
+                nowPlaying={nowPlaying}
                 wellnessPrompt={wellnessPrompt}
                 notchSettings={notchSettings}
                 onUpdateNotchSetting={onUpdateNotchSetting}

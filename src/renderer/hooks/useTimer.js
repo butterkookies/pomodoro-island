@@ -41,11 +41,23 @@ export function useTimer(onComplete) {
     );
     workerRef.current = worker;
 
+    worker.onerror = (err) => {
+      console.error('[timerWorker] Web Worker error:', err);
+    };
+
     worker.onmessage = ({ data }) => {
       if (data.type === 'TICK') {
-        setRemaining(data.remaining);
-        setPercent(data.percent);
-        remainingRef.current = data.remaining;
+        const remaining = typeof data.remaining === 'number' ? data.remaining : 0;
+        setRemaining(remaining);
+        remainingRef.current = remaining;
+
+        // Guaranteed accurate percent calculation from active durationRef
+        const total = durationRef.current > 0 ? durationRef.current : (data.duration || 25 * 60 * 1000);
+        const safePercent = total > 0
+          ? Math.max(0, Math.min(1, remaining / total))
+          : (Number.isFinite(data.percent) ? data.percent : 1);
+
+        setPercent(safePercent);
       }
       if (data.type === 'COMPLETE') {
         if (allowOvertimeRef.current) {
@@ -66,6 +78,7 @@ export function useTimer(onComplete) {
         } else {
           setIsRunning(false);
           isRunningRef.current = false;
+          setPercent(0);
           playPhaseComplete();
           onCompleteRef.current?.(durationRef.current);
         }
@@ -79,7 +92,8 @@ export function useTimer(onComplete) {
         setIsRunning(false);
         isRunningRef.current = false;
       } else if (remainingRef.current > 0) {
-        worker.postMessage({ type: 'RESUME', remaining: remainingRef.current });
+        const dur = durationRef.current || 25 * 60 * 1000;
+        worker.postMessage({ type: 'RESUME', duration: dur, remaining: remainingRef.current });
         setIsRunning(true);
         isRunningRef.current = true;
       }
@@ -88,7 +102,8 @@ export function useTimer(onComplete) {
     // Hotkey: skip current phase
     window.electronAPI?.onSkipPhase(() => {
       if (overtimeTimerRef.current) clearInterval(overtimeTimerRef.current);
-      worker.postMessage({ type: 'RESET' });
+      const dur = durationRef.current || 25 * 60 * 1000;
+      worker.postMessage({ type: 'RESET', duration: dur });
       setIsRunning(false);
       isRunningRef.current = false;
       setIsOvertime(false);
@@ -114,13 +129,14 @@ export function useTimer(onComplete) {
     setOvertimeMs(0);
     overtimeMsRef.current = 0;
     allowOvertimeRef.current = enableOvertime;
-    durationRef.current = duration;
-    remainingRef.current = duration;
-    setRemaining(duration);
+    const validDuration = duration && duration > 0 ? duration : 25 * 60 * 1000;
+    durationRef.current = validDuration;
+    remainingRef.current = validDuration;
+    setRemaining(validDuration);
     setPercent(1);
     setIsRunning(true);
     isRunningRef.current = true;
-    workerRef.current?.postMessage({ type: 'START', duration });
+    workerRef.current?.postMessage({ type: 'START', duration: validDuration });
   }, []);
 
   const pause = useCallback(() => {
@@ -132,7 +148,11 @@ export function useTimer(onComplete) {
 
   const resume = useCallback(() => {
     if (isOvertime) return;
-    workerRef.current?.postMessage({ type: 'RESUME', remaining: remainingRef.current });
+    const dur = durationRef.current || 25 * 60 * 1000;
+    const rem = typeof remainingRef.current === 'number' && remainingRef.current > 0
+      ? remainingRef.current
+      : dur;
+    workerRef.current?.postMessage({ type: 'RESUME', duration: dur, remaining: rem });
     setIsRunning(true);
     isRunningRef.current = true;
   }, [isOvertime]);
@@ -143,25 +163,27 @@ export function useTimer(onComplete) {
     setOvertimeMs(0);
     overtimeMsRef.current = 0;
     allowOvertimeRef.current = enableOvertime;
-    durationRef.current = duration;
-    remainingRef.current = duration;
-    setRemaining(duration);
+    const validDuration = duration && duration > 0 ? duration : 25 * 60 * 1000;
+    durationRef.current = validDuration;
+    remainingRef.current = validDuration;
+    setRemaining(validDuration);
     setPercent(1);
     setIsRunning(false);
     isRunningRef.current = false;
-    workerRef.current?.postMessage({ type: 'RESET' });
+    workerRef.current?.postMessage({ type: 'SET', duration: validDuration });
   }, []);
 
   const reset = useCallback(() => {
     if (overtimeTimerRef.current) clearInterval(overtimeTimerRef.current);
-    workerRef.current?.postMessage({ type: 'RESET' });
+    const validDuration = durationRef.current && durationRef.current > 0 ? durationRef.current : 25 * 60 * 1000;
+    workerRef.current?.postMessage({ type: 'RESET', duration: validDuration });
     setIsOvertime(false);
     setOvertimeMs(0);
     overtimeMsRef.current = 0;
     setIsRunning(false);
     isRunningRef.current = false;
-    setRemaining(durationRef.current);
-    remainingRef.current = durationRef.current;
+    setRemaining(validDuration);
+    remainingRef.current = validDuration;
     setPercent(1);
   }, []);
 

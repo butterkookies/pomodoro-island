@@ -22,7 +22,7 @@ export function useTasks() {
   }, [scratchpadNotes]);
 
   const setActiveTask = useCallback((task) => {
-    setActiveTaskState(task.trim());
+    setActiveTaskState(task ?? '');
   }, []);
 
   const addNote = useCallback((text) => {

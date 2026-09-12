@@ -41,55 +41,50 @@
   box-sizing: border-box;
 }
 
-/* Idle state: sleek minimal Apple Dynamic Island capsule */
+/* ── Idle State: Refined Glanceable Mini-Capsule ── */
 .idleContent {
   width: 100%;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
   position: absolute;
   inset: 0;
   overflow: hidden;
-  padding: 2px 14px;
-  gap: 2px;
+  padding: 0 14px;
+  user-select: none;
+  box-sizing: border-box;
 }
 
-.idleRow {
+.idleContentBoth {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.idleContentCenter {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Tabular Time Digits */
+.idleTimeWrapper {
   display: flex;
   align-items: center;
-  gap: 6px;
-}
-
-.idleDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+  justify-content: center;
   flex-shrink: 0;
-  animation: idleBreathing 3.6s ease-in-out infinite;
-}
-
-@keyframes idleBreathing {
-  0%, 100% {
-    opacity: 0.65;
-    transform: scale(0.92);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.08);
-    box-shadow: 0 0 4px rgba(255, 255, 255, 0.2);
-  }
+  user-select: none;
 }
 
 .idleDigits {
   font-family: var(--font-timer);
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
-  font-weight: 600;
-  font-size: 11px;
+  font-weight: 700;
+  font-size: 15px;
   letter-spacing: -0.015em;
-  color: var(--text-secondary);
+  color: #ffffff;
   line-height: 1;
 }
 
@@ -97,46 +92,119 @@
   font-family: var(--font-timer);
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
-  font-weight: 600;
-  font-size: 11px;
+  font-weight: 700;
+  font-size: 15px;
   letter-spacing: -0.015em;
-  width: 4px;
+  width: 5px;
   text-align: center;
-  color: rgba(255, 255, 255, 0.7);
-  margin: 0 0.5px;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0 1px;
   line-height: 1;
 }
 
-/* Subtle glowing line indicating active timer while idle */
-.idleProgressTrack {
-  width: 100%;
-  height: 2px;
+/* Frosted-Glass Pill Progress Track */
+.idleBarTrack {
+  width: 68px;
+  height: 15px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
+  background: #111114;
+  border: 1px solid rgba(0, 0, 0, 0.50);
+  box-shadow:
+    inset 0 1.5px 3px rgba(0, 0, 0, 0.80),
+    inset 0 0.5px 1px rgba(0, 0, 0, 0.60);
   position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
-.idleProgressBar {
+.idleBarTrackCentered {
+  width: 82px;
+}
+
+.idleBarFill {
   height: 100%;
   border-radius: 999px;
   background:
+    radial-gradient(
+      ellipse 26px 20px at 90% 50%,
+      rgba(255, 255, 255, 0.80) 0%,
+      rgba(255, 255, 255, 0.35) 40%,
+      rgba(255, 255, 255, 0) 75%
+    ),
     linear-gradient(
       180deg,
-      rgba(0, 0, 0, 0.20) 0%,
-      rgba(255, 255, 255, 0.12) 40%,
-      rgba(0, 0, 0, 0.25) 100%
+      rgba(255, 255, 255, 0.40) 0%,
+      rgba(255, 255, 255, 0.12) 30%,
+      rgba(0, 0, 0, 0.18) 100%
     ),
     linear-gradient(
       90deg,
-      #3a4369 0%,
-      #556391 22%,
-      #7b8cb8 50%,
-      #a0b2dc 75%,
-      #d0d9ee 100%
+      #485c8e 0%,
+      #5b72a8 30%,
+      #768ebd 65%,
+      #9ab2de 100%
     );
   box-shadow:
-    inset 0 1px 1.5px rgba(255, 255, 255, 0.45),
-    inset 0 -1px 1.5px rgba(0, 0, 0, 0.35);
+    inset 0 1px 1px rgba(255, 255, 255, 0.60),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.35),
+    0 0 6px rgba(118, 142, 189, 0.30);
   transition: width 150ms linear;
+}
+
+/* ── Mini Music Indicators in Idle Notch ─────────────────── */
+.idleMusicThumb {
+  width: 15px;
+  height: 15px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.idleEqualizer {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 11px;
+  flex-shrink: 0;
+}
+
+.idleEqBar {
+  width: 2px;
+  background: var(--accent-bar, #768ebd);
+  border-radius: 1px;
+  display: block;
+}
+
+.idleEqBar:nth-child(1) {
+  height: 3px;
+  animation: idleEqBounce1 0.75s ease-in-out infinite alternate;
+}
+
+.idleEqBar:nth-child(2) {
+  height: 10px;
+  animation: idleEqBounce2 0.55s ease-in-out infinite alternate;
+}
+
+.idleEqBar:nth-child(3) {
+  height: 5px;
+  animation: idleEqBounce3 0.85s ease-in-out infinite alternate;
+}
+
+@keyframes idleEqBounce1 {
+  0% { height: 3px; }
+  100% { height: 11px; }
+}
+
+@keyframes idleEqBounce2 {
+  0% { height: 11px; }
+  100% { height: 3px; }
+}
+
+@keyframes idleEqBounce3 {
+  0% { height: 4px; }
+  100% { height: 9px; }
 }

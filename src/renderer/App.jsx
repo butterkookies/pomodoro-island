@@ -8,17 +8,22 @@ import { useReminders } from './hooks/useReminders';
 import { useTasks } from './hooks/useTasks';
 import { useStats } from './hooks/useStats';
 import { useNotchSettings } from './hooks/useNotchSettings';
+import { useNowPlaying } from './hooks/useNowPlaying';
 import { playReminder, getWellnessPrompt } from './utils/soundManager';
 import { getCurrentSound, play as ambientPlay, stop as ambientStop } from './utils/ambientPlayer';
 import { notifyPhaseComplete, notifyReminder } from './utils/notificationManager';
 import DevFeedbackOverlay from './components/DevFeedback/DevFeedbackOverlay';
 import styles from './App.module.css';
 
+// Set to true to re-enable in-app visual pin drops & dev comments overlay
+const ENABLE_DEV_FEEDBACK = false;
+
 export default function App() {
   const pomodoro = usePomodoro();
   const tasks = useTasks();
   const stats = useStats();
   const notch = useNotchSettings();
+  const nowPlaying = useNowPlaying();
   const [wellnessPrompt, setWellnessPrompt] = useState(() => getWellnessPrompt());
   const [isFeedbackActive, setIsFeedbackActive] = useState(false);
 
@@ -91,6 +96,10 @@ export default function App() {
 
   // ── Pomodoro Auto-start & Phase transitions ──────────────
   const isInitialMount = useRef(true);
+  const isRunningRef = useRef(timer.isRunning);
+  useEffect(() => {
+    isRunningRef.current = timer.isRunning;
+  }, [timer.isRunning]);
 
   useEffect(() => {
     const isBreak = pomodoro.state === 'SHORT_BREAK' || pomodoro.state === 'LONG_BREAK';
@@ -98,13 +107,19 @@ export default function App() {
 
     if (isInitialMount.current) {
       isInitialMount.current = false;
-      timer.start(pomodoro.config.duration, isFocus);
+      const shouldAuto = isBreak ? pomodoro.autoStartBreaks : pomodoro.autoStartFocus;
+      if (shouldAuto) {
+        timer.start(pomodoro.config.duration, isFocus);
+      } else {
+        timer.set(pomodoro.config.duration, isFocus);
+      }
       return;
     }
 
     const shouldAutoStart = isBreak ? pomodoro.autoStartBreaks : pomodoro.autoStartFocus;
+    const wasRunning = isRunningRef.current;
 
-    if (shouldAutoStart) {
+    if (shouldAutoStart || wasRunning) {
       timer.start(pomodoro.config.duration, isFocus);
     } else {
       timer.set(pomodoro.config.duration, isFocus);
@@ -127,7 +142,7 @@ export default function App() {
 
   // ── Sync live status to System Tray ───────────────────────
   useEffect(() => {
-    const taskSuffix = tasks.activeTask ? ` • ${tasks.activeTask}` : '';
+    const taskSuffix = tasks.activeTask?.trim() ? ` • ${tasks.activeTask.trim()}` : '';
     window.electronAPI?.updateStatus?.({
       text: `${pomodoro.config.label}${taskSuffix}`,
       time: timer.timeDisplay,
@@ -171,6 +186,7 @@ export default function App() {
         onAddReminder={addReminder}
         durations={pomodoro.durations}
         onSetDuration={pomodoro.setDuration}
+        onSetPhase={pomodoro.setPhase}
         autoStartBreaks={pomodoro.autoStartBreaks}
         onSetAutoStartBreaks={pomodoro.setAutoStartBreaks}
         autoStartFocus={pomodoro.autoStartFocus}
@@ -194,6 +210,8 @@ export default function App() {
         onClearCompletedNotes={tasks.clearCompletedNotes}
         // Stats props
         stats={stats}
+        // Now playing music
+        nowPlaying={nowPlaying}
         // Wellness prompt
         wellnessPrompt={wellnessPrompt}
         // Notch settings props
@@ -201,14 +219,16 @@ export default function App() {
         onUpdateNotchSetting={notch.updateSetting}
         onResetNotchSettings={notch.resetToDefaults}
       />
-      <DevFeedbackOverlay
-        islandRef={island.islandRef}
-        islandState={island.state}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        setIslandState={island.setState}
-        onActiveChange={setIsFeedbackActive}
-      />
+      {ENABLE_DEV_FEEDBACK && (
+        <DevFeedbackOverlay
+          islandRef={island.islandRef}
+          islandState={island.state}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          setIslandState={island.setState}
+          onActiveChange={setIsFeedbackActive}
+        />
+      )}
     </div>
   );
 }
