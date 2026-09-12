@@ -8,7 +8,8 @@ function ctx() {
   if (!_ctx) {
     _ctx = new AudioContext();
     _masterGain = _ctx.createGain();
-    _masterGain.gain.value = _volume;
+    // Psychoacoustic logarithmic curve
+    _masterGain.gain.value = _volume * _volume;
     _masterGain.connect(_ctx.destination);
   }
   if (_ctx.state === 'suspended') _ctx.resume();
@@ -129,7 +130,8 @@ export function stop() {
 export function setVolume(v) {
   _volume = Math.max(0, Math.min(1, v));
   if (_masterGain) {
-    _masterGain.gain.setTargetAtTime(_volume, ctx().currentTime, 0.05);
+    const logGain = _volume * _volume;
+    _masterGain.gain.setTargetAtTime(logGain, ctx().currentTime, 0.05);
   }
   window.electronAPI?.store?.set('ambientVolume', _volume);
 }

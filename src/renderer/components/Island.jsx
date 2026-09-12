@@ -4,7 +4,31 @@ import CompactView from './CompactView';
 import ExpandedView from './ExpandedView';
 import ReminderBanner from './ReminderBanner';
 import styles from './Island.module.css';
-import { SPRING } from '../../shared/constants';
+import { SPRING, SPRING_CONTAINER } from '../../shared/constants';
+
+// Apple Dynamic Island view entry/exit transitions (scale 0.98->1 over 180ms, 1->0.99 over 100ms)
+const viewVariants = {
+  initial: {
+    opacity: 0,
+    scale: 0.98,
+  },
+  animate: {
+    opacity: 1,
+    scale: 1.0,
+    transition: {
+      duration: 0.18,
+      ease: [0.16, 1, 0.3, 1],
+    },
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.99,
+    transition: {
+      duration: 0.10,
+      ease: 'easeOut',
+    },
+  },
+};
 
 export default function Island({
   islandRef,
@@ -16,6 +40,8 @@ export default function Island({
   timeDisplay,
   percent,
   isRunning,
+  isOvertime,
+  onFinishOvertime,
   // Pomodoro props
   pomodoroState,
   color,
@@ -67,6 +93,7 @@ export default function Island({
   onResetNotchSettings,
 }) {
   const [isScratchpadOpen, setIsScratchpadOpen] = useState(false);
+  const [mins, secs] = (timeDisplay || '25:00').split(':');
 
   // Dynamic Island dimensions per state
   function getDims() {
@@ -79,10 +106,10 @@ export default function Island({
 
     // Expanded state
     const width = 440;
-    if (activeTab === 'tasks') return { width, height: 260 };
-    if (activeTab === 'audio' || activeTab === 'music') return { width, height: 190 };
-    if (activeTab === 'stats') return { width, height: 250 };
-    if (activeTab === 'settings') return { width, height: 305 };
+    if (activeTab === 'tasks') return { width, height: 250 };
+    if (activeTab === 'audio' || activeTab === 'music') return { width, height: 165 };
+    if (activeTab === 'stats') return { width, height: 245 };
+    if (activeTab === 'settings') return { width, height: 285 };
 
     // Timer tab
     const isBreak = pomodoroState === 'SHORT_BREAK' || pomodoroState === 'LONG_BREAK';
@@ -120,7 +147,7 @@ export default function Island({
         width: dims.width,
         height: dims.height,
       }}
-      transition={SPRING}
+      transition={SPRING_CONTAINER}
       style={{
         '--island-bg': islandBg,
         '--ear-border': borderColor,
@@ -146,10 +173,16 @@ export default function Island({
           height: earConfig.earHeight,
           left: -earConfig.earWidth + 1,
         }}
-        transition={SPRING}
+        transition={SPRING_CONTAINER}
       >
+        <defs>
+          <linearGradient id="earStrokeLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="var(--ear-border)" />
+            <stop offset="100%" stopColor="var(--ear-border)" />
+          </linearGradient>
+        </defs>
         <path d="M 0 0 C 7 0 14 7 14 14 L 15 14 L 15 0 Z" fill="var(--island-bg)" />
-        <path d="M 0 0 C 7 0 14 7 14 14" stroke="var(--ear-border)" strokeWidth="1" vectorEffect="non-scaling-stroke" fill="none" />
+        <path d="M 0 0 C 7 0 14 7 14 14" stroke="url(#earStrokeLeft)" strokeWidth="1" vectorEffect="non-scaling-stroke" fill="none" />
       </motion.svg>
 
       {/* ── Right Concave Ear (Smooth Tangent Flare into Screen Bezel) ── */}
@@ -161,22 +194,19 @@ export default function Island({
         animate={{
           width: earConfig.earWidth,
           height: earConfig.earHeight,
-        }}
-        transition={SPRING}
-      >
-        <path d="M 15 0 C 8 0 1 7 1 14 L 0 14 L 0 0 Z" fill="var(--island-bg)" />
-        <path d="M 15 0 C 8 0 1 7 1 14" stroke="var(--ear-border)" strokeWidth="1" vectorEffect="non-scaling-stroke" fill="none" />
-      </motion.svg>
-
-      {/* ── Top Specular Light Catch ── */}
-      <motion.div
-        className={styles.specularTop}
-        animate={{
-          left: -earConfig.earWidth + 1,
           right: -earConfig.earWidth + 1,
         }}
-        transition={SPRING}
-      />
+        transition={SPRING_CONTAINER}
+      >
+        <defs>
+          <linearGradient id="earStrokeRight" x1="100%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="var(--ear-border)" />
+            <stop offset="100%" stopColor="var(--ear-border)" />
+          </linearGradient>
+        </defs>
+        <path d="M 15 0 C 8 0 1 7 1 14 L 0 14 L 0 0 Z" fill="var(--island-bg)" />
+        <path d="M 15 0 C 8 0 1 7 1 14" stroke="url(#earStrokeRight)" strokeWidth="1" vectorEffect="non-scaling-stroke" fill="none" />
+      </motion.svg>
 
       {/* ── Inner Content Container ── */}
       <div
@@ -188,30 +218,31 @@ export default function Island({
           borderTop: 'none',
         }}
       >
-        <AnimatePresence initial={false}>
+        <AnimatePresence initial={false} mode="wait">
           {islandState === 'idle' && (
             <motion.div
               key="idle"
               className={styles.idleContent}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.12 }}
+              variants={viewVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
             >
               <div className={styles.idleRow}>
                 <div
                   className={styles.idleDot}
                   style={{ background: color }}
                 />
-                <span className={styles.idleTime}>{timeDisplay}</span>
+                <span className={styles.idleDigits}>{mins}</span>
+                <span className={styles.idleColon}>:</span>
+                <span className={styles.idleDigits}>{secs}</span>
               </div>
               {(isRunning || percent < 1) && (
                 <div className={styles.idleProgressTrack}>
                   <motion.div
                     className={styles.idleProgressBar}
-                    style={{ background: color }}
                     animate={{ width: `${(1 - percent) * 100}%` }}
-                    transition={{ duration: 0.12, ease: 'linear' }}
+                    transition={{ duration: 0.15, ease: 'linear' }}
                   />
                 </div>
               )}
@@ -222,10 +253,10 @@ export default function Island({
             <motion.div
               key="compact"
               style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.12 }}
+              variants={viewVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
             >
               <CompactView
                 timeDisplay={timeDisplay}
@@ -233,6 +264,8 @@ export default function Island({
                 color={color}
                 label={label}
                 isRunning={isRunning}
+                isOvertime={isOvertime}
+                onFinishOvertime={onFinishOvertime}
                 nextReminder={nextReminder}
                 activeTask={activeTask}
                 onPause={onPause}
@@ -248,15 +281,17 @@ export default function Island({
             <motion.div
               key="expanded"
               style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.12 }}
+              variants={viewVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
             >
               <ExpandedView
                 timeDisplay={timeDisplay}
                 percent={percent}
                 isRunning={isRunning}
+                isOvertime={isOvertime}
+                onFinishOvertime={onFinishOvertime}
                 color={color}
                 label={label}
                 sessionCount={sessionCount}

@@ -37,9 +37,10 @@ function setDisplay(displayId) {
   const displays = screen.getAllDisplays();
   const target = displays.find(d => d.id === displayId) || screen.getPrimaryDisplay();
   store.set('selectedDisplayId', target.id);
+  const topMargin = store.get('topMargin', 0);
   if (win && !win.isDestroyed()) {
     const x = Math.floor(target.bounds.x + target.bounds.width / 2 - OVERLAY_WIDTH / 2);
-    const y = target.bounds.y;
+    const y = target.bounds.y + topMargin;
     win.setBounds({ x, y, width: OVERLAY_WIDTH, height: OVERLAY_HEIGHT });
   }
   updateTray();
@@ -114,8 +115,9 @@ function updateTray() {
 
 function createWindow() {
   const display = getTargetDisplay();
+  const topMargin = store.get('topMargin', 0);
   const x = Math.floor(display.bounds.x + display.bounds.width / 2 - OVERLAY_WIDTH / 2);
-  const y = display.bounds.y;
+  const y = display.bounds.y + topMargin;
 
   const winInstance = new BrowserWindow({
     x,
@@ -165,7 +167,11 @@ app.whenReady().then(() => {
       console.error('[Main WebContents] executeJavaScript error:', err);
     }
   });
-  win.webContents.on('console-message', (e, level, msg, line, src) => {
+  win.webContents.on('console-message', (event) => {
+    const level = event.level ?? 0;
+    const msg = event.message ?? '';
+    const src = event.sourceId ?? '';
+    const line = event.lineNumber ?? '';
     console.log(`[Renderer Log L${level}]: ${msg} (${src}:${line})`);
   });
 
@@ -191,9 +197,13 @@ app.whenReady().then(() => {
     const relY = cursor.y - bounds.y;
 
     if (isIdle) {
+      // Narrow hover zone to actual idle island width (170px) + comfortable padding (220px total)
+      // centered at the top, preventing Windows Snap Layout drops outside center from popping open
+      const idleCorridorMin = (bounds.width - 220) / 2;
+      const idleCorridorMax = (bounds.width + 220) / 2;
       const inHoverZone =
-        relX >= 0 &&
-        relX <= bounds.width &&
+        relX >= idleCorridorMin &&
+        relX <= idleCorridorMax &&
         relY >= 0 &&
         relY <= HOVER_ZONE_HEIGHT;
 
@@ -240,17 +250,30 @@ app.whenReady().then(() => {
     }
   });
 
-  // ── Hotkeys ────────────────────────────────────────
+  // ── Collision-Safe Hotkeys ─────────────────────────
+  // Primary safe shortcuts using Ctrl+Alt (avoids hijacking Ctrl+Shift+S Save As)
+  globalShortcut.register('CommandOrControl+Alt+P', () => {
+    win?.webContents?.send('toggle-pause');
+  });
+
+  globalShortcut.register('CommandOrControl+Alt+S', () => {
+    win?.webContents?.send('skip-phase');
+  });
+
+  globalShortcut.register('CommandOrControl+Alt+M', () => {
+    win?.webContents?.send('media-toggle');
+  });
+
+  globalShortcut.register('CommandOrControl+Alt+I', () => {
+    if (win && !win.isDestroyed()) {
+      if (!isNotchVisible) toggleNotchVisibility();
+      win.webContents.send('toggle-expand');
+    }
+  });
+
+  // Legacy fallback shortcuts for backward compatibility
   globalShortcut.register('CommandOrControl+Shift+Space', () => {
-    win.webContents.send('toggle-pause');
-  });
-
-  globalShortcut.register('CommandOrControl+Shift+S', () => {
-    win.webContents.send('skip-phase');
-  });
-
-  globalShortcut.register('CommandOrControl+Shift+M', () => {
-    win.webContents.send('media-toggle');
+    win?.webContents?.send('toggle-pause');
   });
 
   globalShortcut.register('CommandOrControl+Shift+E', () => {
@@ -261,6 +284,26 @@ app.whenReady().then(() => {
   });
 
   // ── IPC handlers ───────────────────────────────────
+  ipcMain.handle('get-login-item', () => {
+    return app.getLoginItemSettings().openAtLogin;
+  });
+
+  ipcMain.on('set-login-item', (_event, openAtLogin) => {
+    app.setLoginItemSettings({ openAtLogin });
+    store.set('openAtLogin', openAtLogin);
+  });
+
+  ipcMain.on('set-top-margin', (_event, margin) => {
+    const val = Math.max(0, Math.min(24, parseInt(margin, 10) || 0));
+    store.set('topMargin', val);
+    const target = getTargetDisplay();
+    if (win && !win.isDestroyed()) {
+      const x = Math.floor(target.bounds.x + target.bounds.width / 2 - OVERLAY_WIDTH / 2);
+      const y = target.bounds.y + val;
+      win.setBounds({ x, y, width: OVERLAY_WIDTH, height: OVERLAY_HEIGHT });
+    }
+  });
+
   ipcMain.on('store-get', (event, key, defaultValue) => {
     event.returnValue = store.get(key, defaultValue);
   });

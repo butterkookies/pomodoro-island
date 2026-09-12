@@ -19,13 +19,14 @@ export function useStats() {
   }, [sessions]);
 
   // Record a completed focus block
-  const recordSession = useCallback((durationMs) => {
+  const recordSession = useCallback((durationMs, taskName = '') => {
     const mins = Math.max(1, Math.round(durationMs / 60000));
     const newSession = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       timestamp: Date.now(),
       date: getTodayString(),
       minutes: mins,
+      task: taskName?.trim() || null,
     };
     setSessionsState((prev) => [newSession, ...prev]);
   }, []);
@@ -99,9 +100,16 @@ export function useStats() {
     return result;
   }, [sessions]);
 
+  // Helper to count completed sessions for a specific task
+  const getTaskSessionCount = useCallback((taskTitle) => {
+    if (!taskTitle) return 0;
+    return sessions.filter((s) => s.task && s.task.toLowerCase() === taskTitle.toLowerCase()).length;
+  }, [sessions]);
+
   return {
     sessions,
     recordSession,
+    getTaskSessionCount,
     todayMinutes,
     todayCount,
     streak,

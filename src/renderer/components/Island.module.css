@@ -23,19 +23,9 @@
 .notchEarRight {
   position: absolute;
   top: 0;
-  left: calc(100% - 1px);
+  right: -14px;
   pointer-events: none;
   z-index: 6;
-}
-
-/* Specular light catch along the top border extending across ears */
-.specularTop {
-  position: absolute;
-  top: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.24) 50%, transparent 100%);
-  pointer-events: none;
-  z-index: 10;
 }
 
 /* Inner content clipped to bottom rounded corners */
@@ -77,21 +67,43 @@
   height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
-  animation: pulseDot 2.4s ease-in-out infinite;
+  animation: idleBreathing 3.6s ease-in-out infinite;
 }
 
-@keyframes pulseDot {
-  0%, 100% { opacity: 0.8; transform: scale(0.95); }
-  50% { opacity: 1; transform: scale(1.1); }
+@keyframes idleBreathing {
+  0%, 100% {
+    opacity: 0.65;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+    box-shadow: 0 0 4px rgba(255, 255, 255, 0.2);
+  }
 }
 
-.idleTime {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--text-secondary);
+.idleDigits {
+  font-family: var(--font-timer);
   font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: -0.015em;
+  color: var(--text-secondary);
+  line-height: 1;
+}
+
+.idleColon {
+  font-family: var(--font-timer);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: -0.015em;
+  width: 4px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0.5px;
   line-height: 1;
 }
 
@@ -99,8 +111,8 @@
 .idleProgressTrack {
   width: 100%;
   height: 2px;
-  background: rgba(255, 255, 255, 0.08);
   border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
   overflow: hidden;
   position: relative;
 }
@@ -108,5 +120,23 @@
 .idleProgressBar {
   height: 100%;
   border-radius: 999px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.20) 0%,
+      rgba(255, 255, 255, 0.12) 40%,
+      rgba(0, 0, 0, 0.25) 100%
+    ),
+    linear-gradient(
+      90deg,
+      #3a4369 0%,
+      #556391 22%,
+      #7b8cb8 50%,
+      #a0b2dc 75%,
+      #d0d9ee 100%
+    );
+  box-shadow:
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.45),
+    inset 0 -1px 1.5px rgba(0, 0, 0, 0.35);
   transition: width 150ms linear;
 }

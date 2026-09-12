@@ -106,6 +106,16 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
+}
+
+.tabContentWrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
 }
 
 /* ── TAB 1: TIMER ───────────────────────────────────── */
@@ -196,7 +206,7 @@
 }
 
 .primaryPlayBtn:active {
-  transform: scale(0.93) translateY(1px);
+  transform: translateY(1.5px);
   box-shadow:
     0 1.5px 3px rgba(0, 0, 0, 0.40),
     inset 0 1.5px 3px rgba(0, 0, 0, 0.25);
@@ -231,7 +241,7 @@
 }
 
 .secondaryActionBtn:active {
-  transform: scale(0.93) translateY(1px);
+  transform: translateY(1.5px);
   box-shadow:
     0 1px 1.5px rgba(0, 0, 0, 0.30),
     inset 0 1px 2px rgba(0, 0, 0, 0.20);
@@ -264,8 +274,9 @@
 
 .presetChipActive {
   background: rgba(255, 255, 255, 0.12);
-  color: var(--text-primary);
-  border-color: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  border-color: var(--accent-bar, #5c77bd);
+  box-shadow: 0 0 6px var(--accent-bar-glow, rgba(92, 119, 189, 0.25));
 }
 
 /* Quick Task Bar */
@@ -433,11 +444,15 @@
 .noteItem {
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 6px;
-  padding: 4px 6px;
+  gap: 8px;
+  background: transparent;
+  border-bottom: 1px solid var(--divider-hairline, rgba(255, 255, 255, 0.045));
+  padding: 5px 2px;
+  transition: background 120ms ease;
+}
+
+.noteItem:hover {
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .checkboxBtn {
@@ -495,93 +510,101 @@
 .audioTab {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   width: 100%;
 }
 
-.soundGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
-  width: 100%;
-}
-
-.soundCard {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
-  padding: 6px 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  text-align: left;
-  cursor: pointer;
-  transition: all 120ms ease;
-}
-
-.soundCard:hover {
-  background: rgba(255, 255, 255, 0.07);
-}
-
-.soundCardActive {
-  background: rgba(255, 255, 255, 0.10);
-  border-color: rgba(255, 255, 255, 0.16);
-}
-
-.soundCardHeader {
+.soundSegmentedGroup {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  padding: 2px;
+  gap: 2px;
   width: 100%;
+  box-sizing: border-box;
 }
 
-.soundName {
+.soundChip {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 6px;
+  border-radius: 999px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
   font-size: 11px;
   font-weight: 500;
+  cursor: pointer;
+  transition: all 120ms ease;
+  user-select: none;
+}
+
+.soundChip:hover {
   color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
 }
 
-.soundDesc {
-  font-size: 9.5px;
-  color: var(--text-tertiary);
-  margin-top: 1px;
+.soundChipActive {
+  background: var(--accent-bar-gradient, linear-gradient(135deg, #485c8e 0%, #768ebd 100%));
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.40);
 }
 
-.soundPlayingWave {
+.soundPlayingIndicator {
   display: flex;
   align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--accent-bar-light, #d0d9ee);
+  font-weight: 500;
+}
+
+.soundWaveSmall {
+  display: inline-flex;
+  align-items: center;
   gap: 2px;
+  height: 10px;
 }
 
-.soundPlayingWave span {
+.soundWaveSmall span {
   width: 2px;
-  height: 8px;
-  background: var(--text-primary);
+  height: 6px;
+  background: currentColor;
   border-radius: 1px;
-  animation: waveAnim 800ms infinite ease-in-out alternate;
+  animation: waveAnimSmall 700ms infinite ease-in-out alternate;
 }
 
-.soundPlayingWave span:nth-child(2) {
+.soundWaveSmall span:nth-child(2) {
   animation-delay: 200ms;
 }
 
-.soundPlayingWave span:nth-child(3) {
+.soundWaveSmall span:nth-child(3) {
   animation-delay: 400ms;
 }
 
-@keyframes waveAnim {
-  0% { height: 3px; }
-  100% { height: 10px; }
+@keyframes waveAnimSmall {
+  0% { height: 2px; }
+  100% { height: 9px; }
 }
 
-.volumeRow {
+.volumeFlatRow {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
-  padding: 6px 10px;
+  padding: 4px 2px;
+  color: var(--text-secondary);
+}
+
+.volumeIcon {
+  flex-shrink: 0;
   color: var(--text-secondary);
 }
 
@@ -601,49 +624,67 @@
   border-radius: 50%;
   background: #ffffff;
   cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.40);
 }
 
 .volumeVal {
   font-size: 10px;
   font-weight: 500;
-  min-width: 24px;
+  min-width: 26px;
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
 }
 
-/* ── TAB 5: SETTINGS ────────────────────────────────── */
+/* ── TAB 5: SETTINGS (Cardless Flat Layout) ──────────── */
 .settingsTab {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   height: 100%;
   overflow-y: auto;
   padding-right: 2px;
 }
 
-.settingsSection {
+.flatSection {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 1px;
+  margin-bottom: 4px;
 }
 
-.durationSettingsRow {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-}
-
-.durationItem {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
-  padding: 6px;
+.flatRow {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
+  justify-content: space-between;
+  min-height: 33px;
+  padding: 4px 2px;
+  border-bottom: 1px solid var(--divider-hairline, rgba(255, 255, 255, 0.045));
+}
+
+.flatRow:last-child {
+  border-bottom: none;
+}
+
+.flatLabel {
+  font-size: 11px;
+  color: var(--text-primary);
+}
+
+.durationInlineStrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 4px 2px 8px;
+  border-bottom: 1px solid var(--divider-hairline, rgba(255, 255, 255, 0.045));
+}
+
+.durationInlineItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .durationLabel {
@@ -676,21 +717,44 @@
   color: var(--text-primary);
 }
 
-.toggleRow {
+.opacityControls {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
-  padding: 6px 10px;
+  gap: 6px;
 }
 
-.toggleLabel {
-  font-size: 11px;
+.opacityPresets {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.presetChipSmall {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 120ms ease;
+  line-height: 1.2;
+}
+
+.presetChipSmall:hover {
+  background: rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
 }
 
+.presetChipSmallActive {
+  background: var(--accent-bar-gradient, linear-gradient(135deg, #485c8e 0%, #768ebd 100%));
+  border-color: rgba(92, 119, 189, 0.45);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* ── Tactile Physical Toggle Switch (Sampled Frosted Steel Blue Accent) ── */
 .toggleSwitch {
   width: 44px;
   height: 22px;
@@ -711,12 +775,12 @@
 }
 
 .toggleOn {
-  background: #84d600;
-  border-color: rgba(0, 0, 0, 0.25);
+  background: var(--accent-bar-gradient, linear-gradient(135deg, #485c8e 0%, #768ebd 100%));
+  border-color: rgba(92, 119, 189, 0.45);
   box-shadow:
-    inset 0 2.5px 5px rgba(0, 0, 0, 0.45),
-    inset 0 1px 2px rgba(0, 0, 0, 0.30),
-    inset 0 -0.5px 1px rgba(255, 255, 255, 0.25);
+    0 0 8px var(--accent-bar-glow, rgba(92, 119, 189, 0.35)),
+    inset 0 2px 4px rgba(0, 0, 0, 0.35),
+    inset 0 -0.5px 1px rgba(255, 255, 255, 0.35);
 }
 
 .toggleThumb {
@@ -735,7 +799,7 @@
   transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-/* 5 Embossed Vertical Grip Ribs (media_1789201231985.png) */
+/* 5 Embossed Vertical Grip Ribs with 90° Overhead Key Light */
 .toggleThumb::after {
   content: '';
   position: absolute;
@@ -745,13 +809,14 @@
   right: 6px;
   background: repeating-linear-gradient(
     90deg,
-    rgba(0, 0, 0, 0.22) 0px,
-    rgba(0, 0, 0, 0.22) 1px,
+    rgba(0, 0, 0, 0.28) 0px,
+    rgba(0, 0, 0, 0.28) 1px,
     transparent 1px,
-    transparent 2px,
-    rgba(255, 255, 255, 0.70) 2px,
-    rgba(255, 255, 255, 0.70) 3px
+    transparent 2px
   );
+  box-shadow:
+    inset 0 1px 0.5px rgba(255, 255, 255, 0.90),
+    inset 0 -1px 0.5px rgba(0, 0, 0, 0.30);
   border-radius: 1px;
 }
 
@@ -771,10 +836,10 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 8px;
-  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 3px 8px;
 }
 
 .displayIcon {
@@ -796,4 +861,82 @@
 .displaySelect option {
   background: #121216;
   color: #ffffff;
+}
+
+/* ── Task Session Pips ──────────────────────────────────── */
+.taskPips {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.taskPipDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.taskPipDotActive {
+  background: var(--accent-bar, #5c77bd);
+  box-shadow: 0 0 4px var(--accent-bar-glow, rgba(92, 119, 189, 0.4));
+}
+
+/* ── Dedicated Reset Button in Transport Row ─────────────── */
+.resetBtn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 120ms ease;
+  outline: none;
+}
+
+.resetBtn:hover {
+  background: rgba(255, 255, 255, 0.10);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.resetBtn:active {
+  transform: translateY(1.5px);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.resetBtn:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.70);
+  outline-offset: 2px;
+}
+
+/* ── Flow Overtime Wrap-Up Button ───────────────────────── */
+.overtimeWrapBtn {
+  margin-top: 6px;
+  background: rgba(255, 149, 0, 0.15);
+  border: 1px solid rgba(255, 149, 0, 0.35);
+  color: #ff9500;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 120ms ease;
+  animation: pulseAmber 2.2s infinite ease-in-out;
+}
+
+.overtimeWrapBtn:hover {
+  background: rgba(255, 149, 0, 0.25);
+  border-color: rgba(255, 149, 0, 0.50);
+}
+
+@keyframes pulseAmber {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.02); box-shadow: 0 0 10px rgba(255, 149, 0, 0.25); }
 }

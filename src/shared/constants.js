@@ -27,10 +27,10 @@ export const ISLAND = {
   IDLE: { width: 170, height: 30 },
   COMPACT: { width: 360, height: 52 },
   EXPANDED: { width: 440, height: 160 },
-  EXPANDED_TASKS: { width: 440, height: 260 },
-  EXPANDED_MUSIC: { width: 440, height: 190 },
-  EXPANDED_STATS: { width: 440, height: 250 },
-  EXPANDED_SETTINGS: { width: 440, height: 280 },
+  EXPANDED_TASKS: { width: 440, height: 250 },
+  EXPANDED_MUSIC: { width: 440, height: 165 },
+  EXPANDED_STATS: { width: 440, height: 245 },
+  EXPANDED_SETTINGS: { width: 440, height: 285 },
 };
 
 // ── Notch & Flared Ears Configuration ───────────────
@@ -58,17 +58,47 @@ export const BORDER_RADIUS = {
 
 // ── Hotkeys ─────────────────────────────────────────
 export const HOTKEYS = {
-  TOGGLE_PAUSE: 'CommandOrControl+Shift+Space',
-  SKIP: 'CommandOrControl+Shift+S',
-  MEDIA_TOGGLE: 'CommandOrControl+Shift+M',
+  TOGGLE_PAUSE: 'CommandOrControl+Alt+P',
+  SKIP: 'CommandOrControl+Alt+S',
+  MEDIA_TOGGLE: 'CommandOrControl+Alt+M',
+  TOGGLE_EXPAND: 'CommandOrControl+Alt+I',
+  // Legacy hotkeys for backward compatibility
+  LEGACY_TOGGLE_PAUSE: 'CommandOrControl+Shift+Space',
+  LEGACY_TOGGLE_EXPAND: 'CommandOrControl+Shift+E',
 };
 
-// ── Apple Fluid Spring Config (Critically Damped) ───
-// Follows Apple WWDC Designing Fluid Interfaces:
-// Snappy response (~0.35s), damping ratio 1.0 (no oscillation, zero bounce)
-export const SPRING = {
+// ── Apple Fluid Spring Configs ───────────────────────
+// Systemic 2-spring hierarchy (smooth container bounds vs crisp tactile controls)
+export const SPRING_CONTAINER = {
   type: 'spring',
-  stiffness: 380,
-  damping: 38,
-  mass: 0.85,
+  stiffness: 420,
+  damping: 41,
+  mass: 0.8,
+};
+
+export const SPRING_INTERACTIVE = {
+  type: 'spring',
+  stiffness: 480,
+  damping: 36,
+  mass: 0.6,
+};
+
+// Default spring alias for backward compatibility
+export const SPRING = SPRING_CONTAINER;
+
+// ── Display Foundation Tokens (Elevated Obsidian) ────
+// #08080a prevents OLED subpixel diode shutoff (no purple smearing) & Mini-LED blooming
+export const OBSIDIAN = {
+  FLOOR: '#08080a',
+  GLASS_COMPACT: 'rgba(8, 8, 10, 0.92)',
+  GLASS_EXPANDED: 'rgba(10, 10, 13, 0.95)',
+};
+
+// ── App Accent Tokens (Sampled from the Frosted Time Bar) ────
+export const ACCENT = {
+  PRIMARY: '#5c77bd',
+  PRIMARY_HOVER: '#6d88ce',
+  LIGHT: '#d0d9ee',
+  GRADIENT: 'linear-gradient(135deg, #485c8e 0%, #768ebd 100%)',
+  GLOW: 'rgba(92, 119, 189, 0.35)',
 };

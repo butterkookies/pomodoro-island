@@ -57,8 +57,9 @@ export function playUiClick() {
     osc.type = 'sine';
     osc.frequency.setValueAtTime(1200, t);
     osc.frequency.exponentialRampToValueAtTime(300, t + 0.015);
-    gain.gain.setValueAtTime(0.08, t);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.015);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(0.08, t + 0.003);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.018);
     osc.start(t);
     osc.stop(t + 0.02);
   } catch {}
@@ -81,7 +82,8 @@ export function playNotchSpring(isExpanding = true) {
       osc.frequency.setValueAtTime(480, t);
       osc.frequency.exponentialRampToValueAtTime(240, t + 0.06);
     }
-    gain.gain.setValueAtTime(0.06, t);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(0.06, t + 0.005);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
     osc.start(t);
     osc.stop(t + 0.07);

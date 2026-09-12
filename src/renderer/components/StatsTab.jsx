@@ -19,21 +19,23 @@ export default function StatsTab({ stats, color }) {
       transition={{ duration: 0.18 }}
       style={{ '--phase-color': color }}
     >
-      {/* ── Metric Cards ── */}
-      <div className={styles.metricsRow}>
-        <div className={styles.metricCard}>
+      {/* ── Metric Telemetry Bar (Flat unified strip, no cards) ── */}
+      <div className={styles.telemetryStrip}>
+        <div className={styles.telemetryItem}>
           <span className={styles.metricLabel}>Today</span>
           <span className={styles.metricValue}>{timeDisplay}</span>
         </div>
-        <div className={styles.metricCard}>
+        <div className={styles.telemetryDivider} />
+        <div className={styles.telemetryItem}>
           <span className={styles.metricLabel}>Sessions</span>
           <span className={styles.metricValue}>{todayCount}</span>
         </div>
-        <div className={styles.metricCard}>
+        <div className={styles.telemetryDivider} />
+        <div className={styles.telemetryItem}>
           <span className={styles.metricLabel}>Streak</span>
           <div className={styles.streakValRow}>
             {streak > 0 && (
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 3 }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 3 }}>
                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
               </svg>
             )}
@@ -42,8 +44,8 @@ export default function StatsTab({ stats, color }) {
         </div>
       </div>
 
-      {/* ── 7-Day Chart ── */}
-      <div className={styles.chartCard}>
+      {/* ── 7-Day Activity Chart (Flat, no card shell) ── */}
+      <div className={styles.chartSection}>
         <div className={styles.chartHeader}>
           <span className={styles.chartTitle}>7-day activity</span>
           <span style={{ fontSize: 9, color: 'var(--text-secondary)' }}>

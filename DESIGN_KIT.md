@@ -17,7 +17,7 @@ Pomodoro Island is an ambient, desktop-integrated productivity companion inspire
 | **2** | **Zero Emojis Everywhere** | Emojis (e.g. 🎯, 🌿, 🧠, 🔥, 🔔, 📝, ★) are completely banned across the entire codebase, including UI, alerts, buttons, tabs, tooltips, and system notifications. All iconography must use bespoke, monochrome 12–14px SVG line or geometric fill glyphs. |
 | **3** | **Universal Inter Typography** | **Inter** is the exclusive font family for all text elements—timer countdowns, headings, labels, buttons, and body copy. Timers and numerical readouts must use tabular numbers (`font-feature-settings: "tnum" 1`). No monospace font fallbacks (e.g. Azeret Mono) and no system sans fallbacks for primary text. |
 | **4** | **No Capslocked Titles** | `text-transform: uppercase` is prohibited. All headings, section headers, badges, and button labels must use natural sentence case or calm title case (e.g., "Phase durations", "Today's activity", "Scratchpad notes"). UI text must feel quiet and conversational, never shouting. |
-| **5** | **Deep Black Obsidian Color Space** | The visual foundation is pure, deep black (`#000000` / `#050508`). No muddy dark-gray or blue-slate washes. Elevated surfaces utilize translucent obsidian glass (`rgba(10, 10, 12, 0.85)` with `backdrop-filter: blur(28px) saturate(190%)`). |
+| **5** | **Elevated Obsidian Color Space** | The visual foundation is deep elevated obsidian (`#08080a`). Raising the floor slightly from pure `#000000` prevents OLED subpixel diode shutoff (eliminating OLED smearing ghosting) and avoids Mini-LED local dimming blooming. Elevated surfaces utilize translucent obsidian glass (`rgba(8, 8, 10, 0.95)` with `backdrop-filter: blur(28px) saturate(190%)`). |
 | **6** | **Radically Simplified Component Placement** | Eliminate competing overlays, overlapping side-drawers, and cluttered button clusters. Components follow a predictable, three-tier state model (Idle → Compact → Expanded) with clear tabbed separation of secondary features (Tasks, Audio, Stats, Settings). |
 
 ---
@@ -31,9 +31,9 @@ Pomodoro Island uses a disciplined monochrome foundation where brightness and op
 ```css
 :root {
   /* Canvas & Obsidian Surfaces */
-  --island-bg-idle: #000000;
-  --island-bg-compact: rgba(6, 6, 8, 0.92);
-  --island-bg-expanded: rgba(8, 8, 10, 0.94);
+  --island-bg-idle: #08080a;
+  --island-bg-compact: rgba(8, 8, 10, 0.92);
+  --island-bg-expanded: rgba(10, 10, 13, 0.95);
   --island-blur: blur(28px) saturate(190%);
 
   /* Hairline Borders (Monochrome only) */
@@ -66,16 +66,28 @@ Pomodoro Island uses a disciplined monochrome foundation where brightness and op
 }
 ```
 
-### Phase Status Representation (Borderless)
+### Signature Frosted Bar Accent & Interactive Highlights
 
-Phase status must **never** tint island borders or create drop-shadow halos. Status is communicated with subtlety via a minimal 4px dot or a delicate background badge fill:
+Active interactive states (toggle switches, soundscape chips, active presets) use the signature satin steel-periwinkle palette sampled directly from the frosted time bar, replacing jarring lime greens:
 
-| Phase | Accent Color Token | Usage | Prohibited Usage |
-|---|---|---|---|
-| **Focus** | `#f5a623` (Warm Amber) | 4px status dot or `rgba(245, 166, 35, 0.12)` pill chip | ❌ Border outlines, card glows, neon shadows |
-| **Short Break** | `#30d158` (Apple Mint) | 4px status dot or `rgba(48, 209, 88, 0.12)` pill chip | ❌ Border outlines, card glows, neon shadows |
-| **Long Break** | `#0a84ff` (Apple Blue) | 4px status dot or `rgba(10, 132, 255, 0.12)` pill chip | ❌ Border outlines, card glows, neon shadows |
-| **Custom / Idle** | `#e5e5ea` (Neutral Silver) | 4px status dot or `rgba(255, 255, 255, 0.10)` pill chip | ❌ Border outlines, card glows, neon shadows |
+```css
+:root {
+  --accent-bar: #5c77bd;
+  --accent-bar-hover: #6d88ce;
+  --accent-bar-light: #d0d9ee;
+  --accent-bar-gradient: linear-gradient(135deg, #485c8e 0%, #768ebd 100%);
+  --accent-bar-glow: rgba(92, 119, 189, 0.35);
+  --divider-hairline: rgba(255, 255, 255, 0.045);
+}
+```
+
+### Cardless Flat Layout Principle
+
+The Expanded Island is itself the card. Nesting multiple bordered cards inside (e.g. separate card boxes for each setting row, audio pill, or note item) creates visual friction and boundary collisions. All secondary views must use flat list rows with subtle hairline dividers (`border-bottom: 1px solid var(--divider-hairline)`).
+
+### Top Bezel Flush Integration
+
+The island sits directly flush against the physical top display bezel. Any top glare line or upper specular reflection (e.g. `.specularTop`) is strictly forbidden, as it appears as a disconnected white line across the screen. The top edge must be pure opaque obsidian `#08080a`.
 
 ---
 

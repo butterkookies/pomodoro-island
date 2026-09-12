@@ -11,6 +11,7 @@ import { useNotchSettings } from './hooks/useNotchSettings';
 import { playReminder, getWellnessPrompt } from './utils/soundManager';
 import { getCurrentSound, play as ambientPlay, stop as ambientStop } from './utils/ambientPlayer';
 import { notifyPhaseComplete, notifyReminder } from './utils/notificationManager';
+import DevFeedbackOverlay from './components/DevFeedback/DevFeedbackOverlay';
 import styles from './App.module.css';
 
 export default function App() {
@@ -19,17 +20,18 @@ export default function App() {
   const stats = useStats();
   const notch = useNotchSettings();
   const [wellnessPrompt, setWellnessPrompt] = useState(() => getWellnessPrompt());
+  const [isFeedbackActive, setIsFeedbackActive] = useState(false);
 
-  const handlePhaseComplete = useCallback(() => {
+  const handlePhaseComplete = useCallback((recordedDuration) => {
     notifyPhaseComplete(pomodoro.state);
     if (pomodoro.state === 'FOCUS') {
-      stats.recordSession(pomodoro.config.duration);
+      stats.recordSession(recordedDuration || pomodoro.config.duration, tasks.activeTask);
     }
     pomodoro.next();
-  }, [pomodoro.state, pomodoro.config.duration, pomodoro.next, stats]);
+  }, [pomodoro.state, pomodoro.config.duration, pomodoro.next, stats, tasks.activeTask]);
 
   const timer = useTimer(handlePhaseComplete);
-  const island = useIslandState();
+  const island = useIslandState({ preventIdle: isFeedbackActive });
   const { timers: customTimers, addTimer, removeTimer } = useCustomTimers();
 
   // Which tab is active in ExpandedView: 'timer' | 'stats' | 'music' | 'settings'
@@ -40,6 +42,12 @@ export default function App() {
 
   // The currently-firing reminder (shows ReminderBanner overlay)
   const [activeReminder, setActiveReminder] = useState(null);
+
+  // Restore user's saved island opacity on launch
+  useEffect(() => {
+    const savedOpacity = window.electronAPI?.store?.get('islandOpacity') ?? 95;
+    document.documentElement.style.setProperty('--island-opacity', (savedOpacity / 100).toString());
+  }, []);
 
   // Refresh wellness prompt on entering a break phase
   useEffect(() => {
@@ -85,19 +93,21 @@ export default function App() {
   const isInitialMount = useRef(true);
 
   useEffect(() => {
+    const isBreak = pomodoro.state === 'SHORT_BREAK' || pomodoro.state === 'LONG_BREAK';
+    const isFocus = pomodoro.state === 'FOCUS';
+
     if (isInitialMount.current) {
       isInitialMount.current = false;
-      timer.start(pomodoro.config.duration);
+      timer.start(pomodoro.config.duration, isFocus);
       return;
     }
 
-    const isBreak = pomodoro.state === 'SHORT_BREAK' || pomodoro.state === 'LONG_BREAK';
     const shouldAutoStart = isBreak ? pomodoro.autoStartBreaks : pomodoro.autoStartFocus;
 
     if (shouldAutoStart) {
-      timer.start(pomodoro.config.duration);
+      timer.start(pomodoro.config.duration, isFocus);
     } else {
-      timer.set(pomodoro.config.duration);
+      timer.set(pomodoro.config.duration, isFocus);
     }
   }, [pomodoro.state, pomodoro.config.duration, pomodoro.autoStartBreaks, pomodoro.autoStartFocus]);
 
@@ -135,6 +145,8 @@ export default function App() {
         timeDisplay={timer.timeDisplay}
         percent={timer.percent}
         isRunning={timer.isRunning}
+        isOvertime={timer.isOvertime}
+        onFinishOvertime={timer.finishOvertime}
         pomodoroState={pomodoro.state}
         color={pomodoro.config.color}
         label={pomodoro.config.label}
@@ -142,9 +154,13 @@ export default function App() {
         onPause={timer.pause}
         onResume={timer.resume}
         onSkip={() => {
+          if (timer.isOvertime) {
+            timer.finishOvertime();
+            return;
+          }
           timer.reset();
           if (pomodoro.state === 'FOCUS') {
-            stats.recordSession(pomodoro.config.duration);
+            stats.recordSession(pomodoro.config.duration, tasks.activeTask);
           }
           pomodoro.next();
         }}
@@ -184,6 +200,14 @@ export default function App() {
         notchSettings={notch.settings}
         onUpdateNotchSetting={notch.updateSetting}
         onResetNotchSettings={notch.resetToDefaults}
+      />
+      <DevFeedbackOverlay
+        islandRef={island.islandRef}
+        islandState={island.state}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        setIslandState={island.setState}
+        onActiveChange={setIsFeedbackActive}
       />
     </div>
   );

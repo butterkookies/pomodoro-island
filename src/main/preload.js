@@ -14,6 +14,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   toggleVisibility: () => ipcRenderer.send('toggle-visibility'),
   updateStatus: (status) => ipcRenderer.send('update-status', status),
   quitApp: () => ipcRenderer.send('quit-app'),
+  setLoginItem: (openAtLogin) => ipcRenderer.send('set-login-item', openAtLogin),
+  getLoginItem: () => ipcRenderer.invoke('get-login-item'),
+  setTopMargin: (margin) => ipcRenderer.send('set-top-margin', margin),
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
   store: {
     get: (key, defaultValue) => ipcRenderer.sendSync('store-get', key, defaultValue),

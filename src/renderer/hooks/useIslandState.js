@@ -18,12 +18,22 @@ import { playNotchSpring } from '../utils/soundManager';
  *   compact ──[mouse leaves island area]──→ idle
  *   expanded: stays open until user clicks collapse, presses Esc, or toggles
  */
-export function useIslandState() {
+export function useIslandState(options = {}) {
+    const { preventIdle = false } = options;
     const [state, setState] = useState('compact'); // 'idle' | 'compact' | 'expanded'
     const stateRef = useRef('compact');
     const prevStateRef = useRef('compact');
     const leaveTimerRef = useRef(null);
     const islandRef = useRef(null); // attached to the island DOM node
+    const preventIdleRef = useRef(preventIdle);
+
+    useEffect(() => {
+        preventIdleRef.current = preventIdle;
+        if (preventIdle) {
+            clearTimeout(leaveTimerRef.current);
+            leaveTimerRef.current = null;
+        }
+    }, [preventIdle]);
 
     // Wrapped safeSetState declared first to prevent TDZ errors
     const safeSetState = useCallback((newState) => {
@@ -91,10 +101,12 @@ export function useIslandState() {
                 // Mouse left the island area.
                 // Only compact (glance) view auto-settles to idle.
                 // Expanded view stays open for user interaction until collapsed.
-                if (stateRef.current === 'compact' && leaveTimerRef.current === null) {
+                if (stateRef.current === 'compact' && leaveTimerRef.current === null && !preventIdleRef.current) {
                     leaveTimerRef.current = setTimeout(() => {
                         leaveTimerRef.current = null;
-                        safeSetState('idle');
+                        if (!preventIdleRef.current) {
+                            safeSetState('idle');
+                        }
                     }, 350);
                 }
             }
@@ -173,7 +185,7 @@ export function useIslandState() {
                 left: rect.left - 14,
                 top: rect.top,
                 right: rect.right + 14,
-                bottom: rect.bottom,
+                bottom: rect.bottom + 48,
             });
         }
 

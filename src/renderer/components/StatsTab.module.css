@@ -1,37 +1,43 @@
 .statsContainer {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
   height: 100%;
-  padding: 4px 6px;
+  padding: 4px 4px;
   box-sizing: border-box;
 }
 
-.metricsRow {
+/* ── Seamless Flat Telemetry Strip ── */
+.telemetryStrip {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
   width: 100%;
+  padding: 6px 4px 10px;
+  border-bottom: 1px solid var(--divider-hairline, rgba(255, 255, 255, 0.045));
 }
 
-.metricCard {
+.telemetryItem {
   flex: 1;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 12px;
-  padding: 6px 10px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 2px;
+}
+
+.telemetryDivider {
+  width: 1px;
+  height: 24px;
+  background: var(--divider-hairline, rgba(255, 255, 255, 0.06));
 }
 
 .metricLabel {
   font-size: 10px;
   font-weight: 500;
   color: var(--text-secondary);
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .streakValRow {
@@ -50,14 +56,13 @@
   font-feature-settings: 'tnum' 1;
 }
 
-.chartCard {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 12px;
-  padding: 8px 12px 6px;
+/* ── 7-Day Activity Chart ── */
+.chartSection {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  width: 100%;
+  padding: 0 4px;
 }
 
 .chartHeader {
@@ -77,8 +82,8 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  height: 48px;
-  gap: 6px;
+  height: 52px;
+  gap: 8px;
   padding-top: 4px;
 }
 
@@ -94,8 +99,8 @@
 
 .barTrack {
   width: 100%;
-  height: 36px;
-  background: rgba(255, 255, 255, 0.06);
+  height: 38px;
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 4px;
   overflow: hidden;
   display: flex;
@@ -106,18 +111,20 @@
 .barFill {
   width: 100%;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.20);
   transition: height 300ms ease;
 }
 
 .barFillToday {
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--accent-bar-gradient, linear-gradient(135deg, #485c8e 0%, #768ebd 100%));
+  box-shadow: 0 0 6px var(--accent-bar-glow, rgba(92, 119, 189, 0.35));
 }
 
 .barLabel {
   font-size: 9px;
   font-weight: 500;
   color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
 }
 
 .barLabelToday {
