@@ -1,0 +1,112 @@
+.island {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: visible;
+  position: relative;
+  cursor: default;
+  flex-direction: column;
+  margin-top: 0;
+  box-sizing: border-box;
+  transition: box-shadow 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Concave ears flaring out into top monitor bezel */
+.notchEarLeft {
+  position: absolute;
+  top: 0;
+  left: -14px;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.notchEarRight {
+  position: absolute;
+  top: 0;
+  left: calc(100% - 1px);
+  pointer-events: none;
+  z-index: 6;
+}
+
+/* Specular light catch along the top border extending across ears */
+.specularTop {
+  position: absolute;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.24) 50%, transparent 100%);
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Inner content clipped to bottom rounded corners */
+.islandInner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* Idle state: sleek minimal Apple Dynamic Island capsule */
+.idleContent {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  padding: 2px 14px;
+  gap: 2px;
+}
+
+.idleRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.idleDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  animation: pulseDot 2.4s ease-in-out infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 0.8; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+.idleTime {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* Subtle glowing line indicating active timer while idle */
+.idleProgressTrack {
+  width: 100%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.idleProgressBar {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 150ms linear;
+}

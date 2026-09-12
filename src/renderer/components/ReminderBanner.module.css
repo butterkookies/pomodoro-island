@@ -1,0 +1,132 @@
+.banner {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 18px;
+    background: rgba(8, 8, 10, 0.94);
+    backdrop-filter: blur(28px) saturate(190%);
+    -webkit-backdrop-filter: blur(28px) saturate(190%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: none;
+    border-radius: 0 0 26px 26px;
+}
+
+/* ── Header row ───────────────────────────── */
+.header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.iconCircle {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.name {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: -0.01em;
+}
+
+.dur {
+    font-size: 10px;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    padding: 1px 7px;
+    font-weight: 500;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Countdown bar ────────────────────────── */
+.countdownTrack {
+    width: 100%;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.countdownFill {
+    height: 100%;
+    background: rgba(255, 255, 255, 0.90);
+    border-radius: 999px;
+}
+
+.sub {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    letter-spacing: 0.01em;
+    align-self: flex-start;
+}
+
+/* ── Actions ──────────────────────────────── */
+.actions {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    margin-top: 2px;
+}
+
+.btnStart {
+    flex: 1;
+    height: 30px;
+    border-radius: 999px;
+    background: #ffffff;
+    border: none;
+    color: #000000;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    transition: transform 80ms ease, background 120ms ease;
+}
+
+.btnStart:hover {
+    background: rgba(255, 255, 255, 0.90);
+    transform: scale(1.02);
+}
+
+.btnDismiss {
+    height: 30px;
+    padding: 0 16px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 120ms ease;
+}
+
+.btnDismiss:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-primary);
+}

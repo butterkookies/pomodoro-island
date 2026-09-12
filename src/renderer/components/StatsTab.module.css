@@ -1,0 +1,126 @@
+.statsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  height: 100%;
+  padding: 4px 6px;
+  box-sizing: border-box;
+}
+
+.metricsRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.metricCard {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.metricLabel {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
+}
+
+.streakValRow {
+  display: flex;
+  align-items: center;
+  color: var(--text-primary);
+}
+
+.metricValue {
+  font-family: var(--font-timer);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.chartCard {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  padding: 8px 12px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chartHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chartTitle {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
+}
+
+.barsRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  height: 48px;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.barCol {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.barTrack {
+  width: 100%;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.barFill {
+  width: 100%;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.25);
+  transition: height 300ms ease;
+}
+
+.barFillToday {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.barLabel {
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+}
+
+.barLabelToday {
+  color: var(--text-primary);
+  font-weight: 600;
+}

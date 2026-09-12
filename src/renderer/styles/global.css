@@ -1,0 +1,132 @@
+/* ── Reset & Baseline ──────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: transparent;
+  overflow: hidden;
+  -webkit-app-region: no-drag;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  color: #ffffff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+}
+
+/* ── Apple-style Minimalist Scrollbars ───────────────── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+/* ── Apple Design Tokens (Deep Black Minimalist) ─────── */
+:root {
+  /* Translucent Obsidian Glass Materials */
+  --pill-bg: #000000;
+  --pill-bg-expanded: rgba(8, 8, 10, 0.94);
+  --pill-border: rgba(255, 255, 255, 0.08);
+  --pill-border-hover: rgba(255, 255, 255, 0.14);
+  --pill-specular: rgba(255, 255, 255, 0.18);
+  --pill-inner-shadow: inset 0 0.5px 0 0 rgba(255, 255, 255, 0.18);
+  --blur-radius: 28px;
+  --blur-saturate: 190%;
+
+  /* Controls & Cards */
+  --card-bg: rgba(255, 255, 255, 0.04);
+  --card-bg-hover: rgba(255, 255, 255, 0.08);
+  --card-bg-active: rgba(255, 255, 255, 0.12);
+  --card-border: rgba(255, 255, 255, 0.07);
+
+  /* Typography Colors */
+  --text-primary: rgba(255, 255, 255, 0.96);
+  --text-secondary: rgba(255, 255, 255, 0.62);
+  --text-tertiary: rgba(255, 255, 255, 0.38);
+  --text-quaternary: rgba(255, 255, 255, 0.20);
+
+  /* Tabular Timer Font (Inter Tabular) */
+  --font-mono: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-timer: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* ── Interactive Elements & Tactile Feedback ─────────── */
+button {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  outline: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1),
+              background 150ms ease,
+              color 150ms ease,
+              opacity 150ms ease;
+}
+
+/* Apple Response: Respond instantly on pointer-down */
+button:active {
+  transform: scale(0.96);
+  transition: transform 60ms ease-out;
+}
+
+button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.4);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+input {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+
+/* ── Accessibility & Preference Overrides ────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --pill-bg: #000000;
+    --pill-bg-expanded: #000000;
+    --blur-radius: 0px;
+    --surface-card: #121216;
+  }
+}

@@ -1,0 +1,799 @@
+/* ── Expanded Modal Container ───────────────────────── */
+.expanded {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+  padding: 8px 12px 12px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* ── Top Navigation Bar ─────────────────────────────── */
+.navBar {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 28px;
+  flex-shrink: 0;
+  margin-bottom: 8px;
+}
+
+.segmentedControl {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  padding: 2px;
+  gap: 1px;
+  position: relative;
+}
+
+.navBtn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.segmentIndicator {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  z-index: -1;
+}
+
+.navLabel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: color 140ms ease;
+  user-select: none;
+}
+
+.navBtnActive .navLabel {
+  color: var(--text-primary);
+}
+
+.countBadge {
+  font-size: 9px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--text-primary);
+  border-radius: 999px;
+  padding: 0 4px;
+  line-height: 12px;
+}
+
+.navSpacer {
+  flex: 1;
+}
+
+.collapseBtn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.collapseBtn:hover {
+  background: rgba(255, 255, 255, 0.10);
+  color: var(--text-primary);
+}
+
+/* ── Content View Area ──────────────────────────────── */
+.viewContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── TAB 1: TIMER ───────────────────────────────────── */
+.timerTab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.heroTimer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.heroTime {
+  font-family: var(--font-timer);
+  font-size: 40px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  color: var(--text-primary);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.phaseSubtitle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.statusDot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.phaseName {
+  color: var(--text-secondary);
+}
+
+.sessionCountText {
+  color: var(--text-tertiary);
+}
+
+/* Transport Controls */
+.transportRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+.primaryPlayBtn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #ffffff 0%, #eceef3 100%);
+  border: none;
+  color: #1a1b1f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.45),
+    0 1.5px 3px rgba(0, 0, 0, 0.30),
+    inset 0 1px 1px #ffffff,
+    inset 0 -1.5px 2px rgba(0, 0, 0, 0.15);
+  transition: transform 80ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.primaryPlayBtn:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #f4f5f8 100%);
+  box-shadow:
+    0 5px 12px rgba(0, 0, 0, 0.50),
+    0 2px 4px rgba(0, 0, 0, 0.35),
+    inset 0 1px 1px #ffffff,
+    inset 0 -1.5px 2px rgba(0, 0, 0, 0.15);
+}
+
+.primaryPlayBtn:active {
+  transform: scale(0.93) translateY(1px);
+  box-shadow:
+    0 1.5px 3px rgba(0, 0, 0, 0.40),
+    inset 0 1.5px 3px rgba(0, 0, 0, 0.25);
+}
+
+.secondaryActionBtn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #cfd1d8 0%, #bcbfc8 100%);
+  border: none;
+  color: #1a1b1f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow:
+    0 2.5px 5px rgba(0, 0, 0, 0.30),
+    0 0.5px 1.5px rgba(0, 0, 0, 0.20),
+    inset 0 1px 1px rgba(255, 255, 255, 0.65),
+    inset 0 -1px 1.5px rgba(0, 0, 0, 0.10);
+  transition: transform 80ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.secondaryActionBtn:hover {
+  background: linear-gradient(180deg, #dcdde3 0%, #c8cbd2 100%);
+  color: #000000;
+  box-shadow:
+    0 3px 6px rgba(0, 0, 0, 0.35),
+    inset 0 1px 1px rgba(255, 255, 255, 0.80),
+    inset 0 -1px 1.5px rgba(0, 0, 0, 0.12);
+}
+
+.secondaryActionBtn:active {
+  transform: scale(0.93) translateY(1px);
+  box-shadow:
+    0 1px 1.5px rgba(0, 0, 0, 0.30),
+    inset 0 1px 2px rgba(0, 0, 0, 0.20);
+}
+
+/* Quick Presets Row */
+.presetsRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.presetChip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.presetChip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.presetChipActive {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+/* Quick Task Bar */
+.taskBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  max-width: 320px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  padding: 4px 10px;
+  box-sizing: border-box;
+}
+
+.taskIcon {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.taskInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  font-size: 11px;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.taskInput::placeholder {
+  color: var(--text-tertiary);
+}
+
+.taskClearBtn {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.taskClearBtn:hover {
+  color: var(--text-primary);
+}
+
+/* Wellness Banner */
+.wellnessRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 3px 8px;
+}
+
+.wellnessIcon {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.wellnessText {
+  line-height: 1.2;
+}
+
+/* ── TAB 2: TASKS & SCRATCHPAD ──────────────────────── */
+.tasksTab {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.sectionBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+}
+
+.sectionHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sectionTitle {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
+}
+
+.textActionBtn {
+  background: none;
+  border: none;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 0;
+}
+
+.textActionBtn:hover {
+  color: var(--text-primary);
+}
+
+.addNoteForm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.noteInput {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 11px;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.noteInput::placeholder {
+  color: var(--text-tertiary);
+}
+
+.noteSubmitBtn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.noteSubmitBtn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.notesList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.emptyState {
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+  padding: 8px 4px;
+}
+
+.noteItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 4px 6px;
+}
+
+.checkboxBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.checkboxChecked {
+  background: rgba(255, 255, 255, 0.90);
+  border-color: rgba(255, 255, 255, 0.90);
+  color: #000000;
+}
+
+.noteText {
+  flex: 1;
+  font-size: 11px;
+  color: var(--text-primary);
+  cursor: pointer;
+  word-break: break-word;
+}
+
+.noteDone .noteText {
+  text-decoration: line-through;
+  color: var(--text-tertiary);
+}
+
+.noteDeleteBtn {
+  background: none;
+  border: none;
+  color: var(--text-quaternary);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+}
+
+.noteDeleteBtn:hover {
+  color: var(--text-primary);
+}
+
+/* ── TAB 3: AMBIENT AUDIO ───────────────────────────── */
+.audioTab {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.soundGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  width: 100%;
+}
+
+.soundCard {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.soundCard:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.soundCardActive {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.soundCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.soundName {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.soundDesc {
+  font-size: 9.5px;
+  color: var(--text-tertiary);
+  margin-top: 1px;
+}
+
+.soundPlayingWave {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.soundPlayingWave span {
+  width: 2px;
+  height: 8px;
+  background: var(--text-primary);
+  border-radius: 1px;
+  animation: waveAnim 800ms infinite ease-in-out alternate;
+}
+
+.soundPlayingWave span:nth-child(2) {
+  animation-delay: 200ms;
+}
+
+.soundPlayingWave span:nth-child(3) {
+  animation-delay: 400ms;
+}
+
+@keyframes waveAnim {
+  0% { height: 3px; }
+  100% { height: 10px; }
+}
+
+.volumeRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: var(--text-secondary);
+}
+
+.volumeSlider {
+  flex: 1;
+  -webkit-appearance: none;
+  background: rgba(255, 255, 255, 0.10);
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
+}
+
+.volumeSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.volumeVal {
+  font-size: 10px;
+  font-weight: 500;
+  min-width: 24px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* ── TAB 5: SETTINGS ────────────────────────────────── */
+.settingsTab {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.settingsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.durationSettingsRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.durationItem {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.durationLabel {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.stepperPill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.stepperPill button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.stepperPill button:hover {
+  color: var(--text-primary);
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.toggleLabel {
+  font-size: 11px;
+  color: var(--text-primary);
+}
+
+.toggleSwitch {
+  width: 44px;
+  height: 22px;
+  border-radius: 999px;
+  background: #2b2c32;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+  box-shadow:
+    inset 0 2.5px 5px rgba(0, 0, 0, 0.75),
+    inset 0 1px 2px rgba(0, 0, 0, 0.50),
+    inset 0 -0.5px 1px rgba(255, 255, 255, 0.08);
+  position: relative;
+  cursor: pointer;
+  transition: background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  padding: 0;
+  box-sizing: border-box;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.toggleOn {
+  background: #84d600;
+  border-color: rgba(0, 0, 0, 0.25);
+  box-shadow:
+    inset 0 2.5px 5px rgba(0, 0, 0, 0.45),
+    inset 0 1px 2px rgba(0, 0, 0, 0.30),
+    inset 0 -0.5px 1px rgba(255, 255, 255, 0.25);
+}
+
+.toggleThumb {
+  width: 23px;
+  height: 18px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fdfdfe 0%, #ececef 100%);
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  box-shadow:
+    0 3px 6px rgba(0, 0, 0, 0.35),
+    0 1px 2px rgba(0, 0, 0, 0.25),
+    inset 0 1px 1px rgba(255, 255, 255, 0.95),
+    inset 0 -1px 1.5px rgba(0, 0, 0, 0.15);
+  transition: transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* 5 Embossed Vertical Grip Ribs (media_1789201231985.png) */
+.toggleThumb::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 6px;
+  right: 6px;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.22) 0px,
+    rgba(0, 0, 0, 0.22) 1px,
+    transparent 1px,
+    transparent 2px,
+    rgba(255, 255, 255, 0.70) 2px,
+    rgba(255, 255, 255, 0.70) 3px
+  );
+  border-radius: 1px;
+}
+
+.toggleOn .toggleThumb {
+  transform: translateX(17px);
+}
+
+.toggleSwitch:active .toggleThumb {
+  transform: scale(0.96);
+}
+
+.toggleOn:active .toggleThumb {
+  transform: translateX(17px) scale(0.96);
+}
+
+.displaySelectWrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+
+.displayIcon {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.displaySelect {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+.displaySelect option {
+  background: #121216;
+  color: #ffffff;
+}
