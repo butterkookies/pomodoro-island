@@ -17,6 +17,26 @@
   cursor: grabbing;
 }
 
+.islandMediaActive {
+  box-shadow:
+    /* Layer 1: Structural Depth Occlusion (Pitch-Black Grounding) */
+    0 20px 48px -8px rgba(0, 0, 0, 0.92),
+    0 8px 18px rgba(0, 0, 0, 0.22),
+    /* Layer 2: Audio-Reactive Radiant Bounce */
+    0 calc(28px + var(--audio-pulse, 0) * 16px)
+      calc(54px + var(--audio-pulse, 0) * 32px)
+      calc(-6px + var(--audio-pulse, 0) * 6px)
+      rgba(var(--media-dominant-rgb, 92, 119, 189), calc(0.18 + var(--audio-pulse, 0) * 0.14));
+  transition: box-shadow 300ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .islandMediaActive {
+    --audio-pulse: 0.5;
+    transition: none;
+  }
+}
+
 /* Luminous magnetic alignment tick when island snaps to screen center */
 .magneticGuideTick {
   position: absolute;

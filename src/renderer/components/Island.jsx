@@ -99,6 +99,56 @@ export default function Island({
 }) {
   const [isScratchpadOpen, setIsScratchpadOpen] = useState(false);
   const [mins, secs] = (timeDisplay || '25:00').split(':');
+  const isMediaActive = Boolean(nowPlaying?.isPlaying && nowPlaying?.title);
+
+  // Dynamic audio-reactive pulse animation for active media playback
+  useEffect(() => {
+    if (!isMediaActive) {
+      islandRef?.current?.style.setProperty('--audio-pulse', '0');
+      return;
+    }
+
+    const mediaQuery = typeof window !== 'undefined' && window.matchMedia
+      ? window.matchMedia('(prefers-reduced-motion: reduce)')
+      : null;
+
+    if (mediaQuery?.matches) {
+      islandRef?.current?.style.setProperty('--audio-pulse', '0.5');
+      return () => {
+        islandRef?.current?.style.setProperty('--audio-pulse', '0');
+      };
+    }
+
+    let frameId;
+    let startTime = performance.now();
+    const animatePulse = (currentTime) => {
+      const elapsed = (currentTime - startTime) / 1000;
+      // Smooth rhythmic pulse: composite sine waves simulating musical breathing
+      const pulse = 0.5 + 0.35 * Math.sin(elapsed * 4.2) + 0.15 * Math.sin(elapsed * 8.4);
+      const clampedPulse = Math.max(0, Math.min(1, pulse));
+      islandRef?.current?.style.setProperty('--audio-pulse', clampedPulse.toFixed(3));
+      frameId = requestAnimationFrame(animatePulse);
+    };
+    frameId = requestAnimationFrame(animatePulse);
+
+    const handleMotionChange = (e) => {
+      if (e.matches) {
+        cancelAnimationFrame(frameId);
+        islandRef?.current?.style.setProperty('--audio-pulse', '0.5');
+      } else {
+        startTime = performance.now();
+        frameId = requestAnimationFrame(animatePulse);
+      }
+    };
+
+    mediaQuery?.addEventListener?.('change', handleMotionChange);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      mediaQuery?.removeEventListener?.('change', handleMotionChange);
+      islandRef?.current?.style.setProperty('--audio-pulse', '0');
+    };
+  }, [isMediaActive, islandRef]);
 
   // Dynamic Island dimensions per state
   function getDimensions() {
@@ -257,7 +307,7 @@ export default function Island({
   return (
     <motion.div
       ref={islandRef}
-      className={styles.island}
+      className={`${styles.island} ${isMediaActive ? styles.islandMediaActive : ''}`}
       layout
       drag="x"
       dragConstraints={{ left: -maxDrag, right: maxDrag }}
@@ -278,10 +328,11 @@ export default function Island({
         '--island-bg': islandBg,
         '--ear-border': borderColor,
         borderRadius: radius,
-        boxShadow:
-          islandState !== 'idle'
-            ? '0 2px 5px rgba(0, 0, 0, 0.08), 0 8px 18px rgba(0, 0, 0, 0.16), 0 18px 36px rgba(0, 0, 0, 0.22), 0 32px 64px rgba(0, 0, 0, 0.16)'
-            : '0 2px 5px rgba(0, 0, 0, 0.08), 0 6px 16px rgba(0, 0, 0, 0.14), 0 12px 28px rgba(0, 0, 0, 0.10)',
+        boxShadow: isMediaActive
+          ? undefined
+          : islandState !== 'idle'
+          ? '0 2px 5px rgba(0, 0, 0, 0.08), 0 8px 18px rgba(0, 0, 0, 0.16), 0 18px 36px rgba(0, 0, 0, 0.22), 0 32px 64px rgba(0, 0, 0, 0.16)'
+          : '0 2px 5px rgba(0, 0, 0, 0.08), 0 6px 16px rgba(0, 0, 0, 0.14), 0 12px 28px rgba(0, 0, 0, 0.10)',
         position: 'relative',
       }}
       onMouseEnter={onMouseEnter}
