@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useMotionValue, animate } from 'framer-motion'
 import CompactView from './CompactView';
 import ExpandedView from './ExpandedView';
 import ReminderBanner from './ReminderBanner';
+import OnboardingView from './Onboarding/OnboardingView';
 import styles from './Island.module.css';
 import { SPRING, SPRING_CONTAINER, SPRING_LIQUID, BEZEL_SNAP_THRESHOLD } from '../../shared/constants';
 import { playSnapHaptic } from '../utils/soundManager';
@@ -96,6 +97,12 @@ export default function Island({
   notchSettings,
   onUpdateNotchSetting,
   onResetNotchSettings,
+  // Onboarding
+  isOnboarding = false,
+  onCompleteOnboarding,
+  onStartFirstSession,
+  onSkipOnboarding,
+  onReplayOnboarding,
 }) {
   const [isScratchpadOpen, setIsScratchpadOpen] = useState(false);
   const [mins, secs] = (timeDisplay || '25:00').split(':');
@@ -163,6 +170,10 @@ export default function Island({
 
   // Dynamic Island dimensions per state
   function getDimensions() {
+    if (isOnboarding) {
+      return { width: 480, height: 350 };
+    }
+
     if (islandState === 'idle') {
       const mode = notchSettings?.idleDisplayMode ?? 'both';
       const baseWidth = mode === 'both' ? 184 : mode === 'bar' ? 124 : 108;
@@ -181,7 +192,7 @@ export default function Island({
     }
     if (activeTab === 'tasks') return { width, height: 280 };
     if (activeTab === 'audio' || activeTab === 'music') {
-      return { width, height: nowPlaying?.isPlaying && nowPlaying?.title ? 260 : 185 };
+      return { width, height: nowPlaying?.title ? 272 : 185 };
     }
     if (activeTab === 'stats') return { width, height: 270 };
     if (activeTab === 'settings') return { width, height: 320 };
@@ -193,17 +204,17 @@ export default function Island({
 
   const dims = getDimensions();
   const radius =
-    islandState === 'idle'
+    islandState === 'idle' && !isOnboarding
       ? `0 0 ${notchSettings?.idleBottomRadius ?? 12}px ${notchSettings?.idleBottomRadius ?? 12}px`
-      : islandState === 'compact'
+      : islandState === 'compact' && !isOnboarding
       ? '0 0 20px 20px'
       : '0 0 26px 26px';
 
-  const islandBg = islandState === 'expanded' ? 'var(--pill-bg-expanded)' : 'var(--pill-bg)';
-  const borderColor = islandState !== 'idle' ? 'var(--pill-border)' : 'rgba(255, 255, 255, 0.08)';
+  const islandBg = (islandState === 'expanded' || isOnboarding) ? 'var(--pill-bg-expanded)' : 'var(--pill-bg)';
+  const borderColor = (islandState !== 'idle' || isOnboarding) ? 'var(--pill-border)' : 'rgba(255, 255, 255, 0.08)';
 
   const earConfig =
-    islandState === 'idle'
+    islandState === 'idle' && !isOnboarding
       ? {
           earWidth: notchSettings?.idleEarWidth ?? 10,
           earHeight: notchSettings?.idleEarHeight ?? 9,
@@ -426,7 +437,24 @@ export default function Island({
         }}
       >
         <AnimatePresence initial={false} mode="popLayout">
-          {islandState === 'idle' && (() => {
+          {isOnboarding && (
+            <motion.div
+              key="onboarding"
+              style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}
+              variants={viewVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+            >
+              <OnboardingView
+                onComplete={onCompleteOnboarding}
+                onStartFirstSession={onStartFirstSession}
+                onSkip={onSkipOnboarding}
+              />
+            </motion.div>
+          )}
+
+          {!isOnboarding && islandState === 'idle' && (() => {
             const idleMode = notchSettings?.idleDisplayMode ?? 'both';
             const showTime = idleMode === 'both' || idleMode === 'time';
             const showBar = idleMode === 'both' || idleMode === 'bar';
@@ -483,7 +511,7 @@ export default function Island({
             );
           })()}
 
-          {islandState === 'compact' && (
+          {!isOnboarding && islandState === 'compact' && (
             <motion.div
               key="compact"
               style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}
@@ -511,7 +539,7 @@ export default function Island({
             </motion.div>
           )}
 
-          {islandState === 'expanded' && (
+          {!isOnboarding && islandState === 'expanded' && (
             <motion.div
               key="expanded"
               style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}
@@ -567,6 +595,7 @@ export default function Island({
                 onResetNotchSettings={onResetNotchSettings}
                 horizontalOffset={currentOffsetX}
                 onResetPosition={handleResetPosition}
+                onReplayOnboarding={onReplayOnboarding}
               />
             </motion.div>
           )}

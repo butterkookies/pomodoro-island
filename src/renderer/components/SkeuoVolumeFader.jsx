@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import styles from './SkeuoVolumeFader.module.css';
 
 export const TRACK_HEIGHT = 76;
@@ -88,7 +88,7 @@ export function formatPercentage(t) {
  * Direct-manipulation vertical fader with knurled ridges, physical key lighting,
  * magnetic snap at 70%, mouse wheel support, and full keyboard accessibility.
  */
-export default function SkeuoVolumeFader({
+function SkeuoVolumeFader({
   initialVolume = 0.7,
   onChange,
   className = '',
@@ -230,3 +230,5 @@ export default function SkeuoVolumeFader({
     </div>
   );
 }
+
+export default memo(SkeuoVolumeFader);

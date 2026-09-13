@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, memo } from 'react';
 import styles from './VfdEqualizer.module.css';
 
 export const BANDS = 8;
@@ -160,7 +160,7 @@ export function getSegmentTypeClass(segIdx) {
   return styles.base;
 }
 
-export default function VfdEqualizer({ isPlaying = false, className = '' }) {
+function VfdEqualizer({ isPlaying = false, className = '' }) {
   // Resting state: 0 active levels (base segment illuminated faintly via resting class)
   const [levels, setLevels] = useState(() =>
     isPlaying ? [3, 4, 5, 4, 3, 4, 3, 2] : Array(BANDS).fill(0)
@@ -309,3 +309,5 @@ export default function VfdEqualizer({ isPlaying = false, className = '' }) {
     </div>
   );
 }
+
+export default memo(VfdEqualizer);
