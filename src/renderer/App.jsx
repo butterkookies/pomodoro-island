@@ -36,9 +36,38 @@ export default function App() {
     pomodoro.next();
   }, [pomodoro.state, pomodoro.config.duration, pomodoro.next, stats, tasks.activeTask]);
 
+  const [isOnboarding, setIsOnboarding] = useState(() => {
+    const hasCompleted = window.electronAPI?.store?.get('hasCompletedOnboarding', false);
+    return !hasCompleted;
+  });
+
   const timer = useTimer(handlePhaseComplete);
-  const island = useIslandState({ preventIdle: isFeedbackActive });
+  const island = useIslandState({ preventIdle: isFeedbackActive, isOnboarding });
   const { timers: customTimers, addTimer, removeTimer } = useCustomTimers();
+
+  const handleCompleteOnboarding = useCallback((startTimer = false) => {
+    window.electronAPI?.store?.set('hasCompletedOnboarding', true);
+    setIsOnboarding(false);
+    if (startTimer) {
+      timer.start(pomodoro.config.duration, true);
+      island.setState('compact');
+    } else {
+      island.setState('expanded');
+    }
+  }, [timer, pomodoro.config.duration, island]);
+
+  const handleStartFirstSession = useCallback(() => {
+    handleCompleteOnboarding(true);
+  }, [handleCompleteOnboarding]);
+
+  const handleSkipOnboarding = useCallback(() => {
+    handleCompleteOnboarding(false);
+  }, [handleCompleteOnboarding]);
+
+  const handleReplayOnboarding = useCallback(() => {
+    setIsOnboarding(true);
+    island.setState('expanded');
+  }, [island]);
 
   // Which tab is active in ExpandedView: 'timer' | 'stats' | 'music' | 'settings'
   const [activeTab, setActiveTab] = useState('timer');
@@ -240,6 +269,12 @@ export default function App() {
         notchSettings={notch.settings}
         onUpdateNotchSetting={notch.updateSetting}
         onResetNotchSettings={notch.resetToDefaults}
+        // Onboarding
+        isOnboarding={isOnboarding}
+        onCompleteOnboarding={() => handleCompleteOnboarding(false)}
+        onStartFirstSession={handleStartFirstSession}
+        onSkipOnboarding={handleSkipOnboarding}
+        onReplayOnboarding={handleReplayOnboarding}
       />
       {ENABLE_DEV_FEEDBACK && (
         <DevFeedbackOverlay

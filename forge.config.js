@@ -11,7 +11,10 @@ module.exports = {
       name: '@electron-forge/maker-squirrel',
       config: {
         name: 'pomodoro_island',
+        title: 'Pomodoro Island',
         authors: 'butterkookies',
+        exe: 'pomodoro-island.exe',
+        setupExe: 'PomodoroIsland-Setup.exe',
         description: 'Pomodoro Island — A tactile, notch-anchored focus bar inspired by Apple Dynamic Island',
       },
     },

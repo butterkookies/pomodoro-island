@@ -19,24 +19,34 @@ import { playNotchSpring } from '../utils/soundManager';
  *   expanded: stays open until user clicks collapse, presses Esc, or toggles
  */
 export function useIslandState(options = {}) {
-    const { preventIdle = false } = options;
+    const { preventIdle = false, isOnboarding = false } = options;
     const [state, setState] = useState('compact'); // 'idle' | 'compact' | 'expanded'
     const stateRef = useRef('compact');
     const prevStateRef = useRef('compact');
     const leaveTimerRef = useRef(null);
     const dwellTimerRef = useRef(null);
     const islandRef = useRef(null); // attached to the island DOM node
-    const preventIdleRef = useRef(preventIdle);
+    const preventIdleRef = useRef(preventIdle || isOnboarding);
 
     useEffect(() => {
-        preventIdleRef.current = preventIdle;
-        if (preventIdle) {
+        preventIdleRef.current = preventIdle || isOnboarding;
+        if (preventIdle || isOnboarding) {
             clearTimeout(leaveTimerRef.current);
             leaveTimerRef.current = null;
             clearTimeout(dwellTimerRef.current);
             dwellTimerRef.current = null;
         }
-    }, [preventIdle]);
+    }, [preventIdle, isOnboarding]);
+
+    // Ensure click-through and modal state during onboarding
+    useEffect(() => {
+        if (isOnboarding) {
+            window.electronAPI?.setClickThrough?.(false);
+            window.electronAPI?.setModalOpen?.(true);
+        } else {
+            window.electronAPI?.setModalOpen?.(false);
+        }
+    }, [isOnboarding]);
 
     // Wrapped safeSetState declared first to prevent TDZ errors
     const safeSetState = useCallback((newState) => {
@@ -69,15 +79,16 @@ export function useIslandState(options = {}) {
     }, [state]);
 
     // Show compact island on initial launch so the user immediately sees it,
-    // then auto-settle into idle after 3.5s unless hovered.
+    // then auto-settle into idle after 3.5s unless hovered or in onboarding.
     useEffect(() => {
+        if (isOnboarding) return;
         const introTimer = setTimeout(() => {
-            if (stateRef.current === 'compact') {
+            if (stateRef.current === 'compact' && !isOnboarding) {
                 safeSetState('idle');
             }
         }, 3500);
         return () => clearTimeout(introTimer);
-    }, [safeSetState]);
+    }, [safeSetState, isOnboarding]);
 
     // ── Core: mousemove-based hover detection ──────────────
     useEffect(() => {
