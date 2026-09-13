@@ -12,6 +12,7 @@ import { useNowPlaying } from './hooks/useNowPlaying';
 import { playReminder, getWellnessPrompt } from './utils/soundManager';
 import { getCurrentSound, play as ambientPlay, stop as ambientStop } from './utils/ambientPlayer';
 import { notifyPhaseComplete, notifyReminder } from './utils/notificationManager';
+import { extractDominantColor } from './utils/colorExtractor';
 import DevFeedbackOverlay from './components/DevFeedback/DevFeedbackOverlay';
 import styles from './App.module.css';
 
@@ -148,6 +149,25 @@ export default function App() {
       time: timer.timeDisplay,
     });
   }, [pomodoro.config.label, timer.timeDisplay, tasks.activeTask]);
+
+  // ── Media artwork dominant color extraction ────────────────
+  useEffect(() => {
+    let isMounted = true;
+
+    if (nowPlaying?.isPlaying && nowPlaying?.artwork) {
+      extractDominantColor(nowPlaying.artwork).then((rgb) => {
+        if (isMounted) {
+          document.documentElement.style.setProperty('--media-dominant-rgb', rgb);
+        }
+      });
+    } else {
+      document.documentElement.style.setProperty('--media-dominant-rgb', '92, 119, 189');
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [nowPlaying?.artwork, nowPlaying?.isPlaying]);
 
   return (
     <div className={styles.app}>
