@@ -101,7 +101,7 @@ export default function Island({
   const [mins, secs] = (timeDisplay || '25:00').split(':');
 
   // Dynamic Island dimensions per state
-  function getDims() {
+  function getDimensions() {
     if (islandState === 'idle') {
       const mode = notchSettings?.idleDisplayMode ?? 'both';
       const baseWidth = mode === 'both' ? 184 : mode === 'bar' ? 124 : 108;
@@ -109,22 +109,29 @@ export default function Island({
       return { width, height: notchSettings?.idleHeight ?? 32 };
     }
     if (islandState === 'compact') {
-      return { width: nowPlaying?.isPlaying ? 450 : 430, height: 52 };
+      return { width: nowPlaying?.isPlaying ? 480 : 460, height: 52 };
     }
 
     // Expanded state
-    const width = 440;
-    if (activeTab === 'tasks') return { width, height: 250 };
-    if (activeTab === 'audio' || activeTab === 'music') return { width, height: nowPlaying?.isPlaying ? 230 : 165 };
-    if (activeTab === 'stats') return { width, height: 245 };
-    if (activeTab === 'settings') return { width, height: 285 };
+    const width = 480;
+    if (activeTab === 'timer') {
+      const isBreak = pomodoroState === 'SHORT_BREAK' || pomodoroState === 'LONG_BREAK';
+      return { width, height: isBreak && wellnessPrompt ? 284 : 264 };
+    }
+    if (activeTab === 'tasks') return { width, height: 280 };
+    if (activeTab === 'audio' || activeTab === 'music') {
+      return { width, height: nowPlaying?.isPlaying && nowPlaying?.title ? 260 : 185 };
+    }
+    if (activeTab === 'stats') return { width, height: 270 };
+    if (activeTab === 'settings') return { width, height: 320 };
 
-    // Timer tab
+    // Timer tab fallback
     const isBreak = pomodoroState === 'SHORT_BREAK' || pomodoroState === 'LONG_BREAK';
-    return { width, height: isBreak ? 260 : 240 };
+    return { width, height: isBreak && wellnessPrompt ? 284 : 264 };
   }
+  const getDims = getDimensions;
 
-  const dims = getDims();
+  const dims = getDimensions();
   const radius =
     islandState === 'idle'
       ? `0 0 ${notchSettings?.idleBottomRadius ?? 12}px ${notchSettings?.idleBottomRadius ?? 12}px`
