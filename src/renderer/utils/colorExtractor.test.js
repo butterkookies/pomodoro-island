@@ -6,8 +6,11 @@ import {
   hslToRgb,
   clampHsl,
   DEFAULT_RGB,
+  DEFAULT_RGB_OBJ,
+  MAX_CACHE_SIZE,
   colorCache,
   clearColorCache,
+  setCache,
 } from './colorExtractor.js';
 
 describe('colorExtractor', () => {
@@ -58,21 +61,31 @@ describe('colorExtractor', () => {
   });
 
   describe('clampHsl', () => {
-    it('clamps saturation to [0.40, 0.85]', () => {
+    it('returns default periwinkle for achromatic / grayscale colors (s < 0.08)', () => {
+      // Neutral gray has s = 0 -> must return signature steel-periwinkle
+      const neutralGray = clampHsl(128, 128, 128);
+      assert.deepEqual(neutralGray, DEFAULT_RGB_OBJ);
+
+      // Near-achromatic gray (e.g. s < 0.08)
+      const nearGray = clampHsl(102, 100, 101);
+      assert.deepEqual(nearGray, DEFAULT_RGB_OBJ);
+    });
+
+    it('clamps saturation to [0.40, 0.85] for chromatic colors', () => {
       // Over-saturated pure red (s = 1.0) gets clamped to s = 0.85
       const clampedHigh = clampHsl(255, 0, 0);
       const highHsl = rgbToHsl(clampedHigh.r, clampedHigh.g, clampedHigh.b);
       assert.ok(highHsl.s <= 0.86 && highHsl.s >= 0.84);
 
-      // Desaturated muddy color gets clamped up to min saturation 0.40
-      const clampedLow = clampHsl(110, 100, 100);
+      // Low saturation chromatic color (e.g. s = 0.20) gets clamped up to min saturation 0.40
+      const clampedLow = clampHsl(130, 100, 100);
       const lowHsl = rgbToHsl(clampedLow.r, clampedLow.g, clampedLow.b);
       assert.ok(lowHsl.s >= 0.39 && lowHsl.s <= 0.42);
     });
 
     it('clamps lightness to [0.25, 0.65]', () => {
-      // Very dark color (e.g. l < 0.25) gets boosted to l >= 0.25
-      const darkColor = clampHsl(32, 32, 40);
+      // Very dark color (e.g. l < 0.25) with chromatic hue gets boosted to l >= 0.25
+      const darkColor = clampHsl(30, 30, 80);
       const darkHsl = rgbToHsl(darkColor.r, darkColor.g, darkColor.b);
       assert.ok(darkHsl.l >= 0.24 && darkHsl.l <= 0.26);
 
@@ -89,10 +102,34 @@ describe('colorExtractor', () => {
     });
 
     it('always outputs bounded integers in [0, 255]', () => {
-      const result = clampHsl(255, 255, 255);
+      const result = clampHsl(200, 150, 100);
       assert.ok(Number.isInteger(result.r) && result.r >= 0 && result.r <= 255);
       assert.ok(Number.isInteger(result.g) && result.g >= 0 && result.g <= 255);
       assert.ok(Number.isInteger(result.b) && result.b >= 0 && result.b <= 255);
+    });
+  });
+
+  describe('cache bounding and eviction', () => {
+    it('evicts the oldest entry when exceeding MAX_CACHE_SIZE', () => {
+      for (let i = 0; i < MAX_CACHE_SIZE; i++) {
+        setCache(`https://example.com/art-${i}.jpg`, `rgb-${i}`);
+      }
+      assert.equal(colorCache.size, MAX_CACHE_SIZE);
+      assert.ok(colorCache.has('https://example.com/art-0.jpg'));
+
+      // Adding the 101st item triggers eviction of oldest (art-0)
+      setCache('https://example.com/art-new.jpg', 'rgb-new');
+      assert.equal(colorCache.size, MAX_CACHE_SIZE);
+      assert.equal(colorCache.has('https://example.com/art-0.jpg'), false);
+      assert.equal(colorCache.has('https://example.com/art-1.jpg'), true);
+      assert.equal(colorCache.get('https://example.com/art-new.jpg'), 'rgb-new');
+    });
+
+    it('updates existing keys without growing cache size', () => {
+      setCache('https://example.com/test.jpg', 'rgb-1');
+      setCache('https://example.com/test.jpg', 'rgb-2');
+      assert.equal(colorCache.size, 1);
+      assert.equal(colorCache.get('https://example.com/test.jpg'), 'rgb-2');
     });
   });
 
@@ -110,7 +147,7 @@ describe('colorExtractor', () => {
     });
 
     it('returns pre-cached value immediately', async () => {
-      colorCache.set('https://example.com/cached.jpg', '16, 185, 129');
+      setCache('https://example.com/cached.jpg', '16, 185, 129');
       const result = await extractDominantColor('https://example.com/cached.jpg');
       assert.equal(result, '16, 185, 129');
     });
@@ -316,6 +353,36 @@ describe('colorExtractor', () => {
 
       assert.equal(result, DEFAULT_RGB);
       assert.equal(colorCache.get('https://example.com/cors.jpg'), DEFAULT_RGB);
+    });
+
+    it('falls back to DEFAULT_RGB and cleans up when image loading times out', async () => {
+      let cleanedUp = false;
+      class MockHangingImage {
+        constructor() {
+          this.onload = () => {};
+          this.onerror = () => {};
+        }
+        set src(v) {
+          // Intentionally do not trigger onload or onerror
+        }
+      }
+
+      const mockDoc = {
+        createElement: () => ({
+          width: 32,
+          height: 32,
+          getContext: () => ({}),
+        }),
+      };
+
+      const result = await extractDominantColor('https://example.com/hanging.jpg', {
+        document: mockDoc,
+        Image: MockHangingImage,
+        timeoutMs: 50,
+      });
+
+      assert.equal(result, DEFAULT_RGB);
+      assert.equal(colorCache.get('https://example.com/hanging.jpg'), DEFAULT_RGB);
     });
   });
 });

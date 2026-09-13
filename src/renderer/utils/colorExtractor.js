@@ -6,8 +6,28 @@
  */
 
 export const DEFAULT_RGB = '92, 119, 189';
+export const DEFAULT_RGB_OBJ = { r: 92, g: 119, b: 189 };
+export const MAX_CACHE_SIZE = 100;
 
 export const colorCache = new Map();
+
+/**
+ * Inserts a value into colorCache with bounded FIFO/LRU eviction of the oldest entry.
+ *
+ * @param {string} key
+ * @param {string} value
+ */
+export function setCache(key, value) {
+  if (colorCache.has(key)) {
+    colorCache.delete(key);
+  } else if (colorCache.size >= MAX_CACHE_SIZE) {
+    const oldestKey = colorCache.keys().next().value;
+    if (oldestKey !== undefined) {
+      colorCache.delete(oldestKey);
+    }
+  }
+  colorCache.set(key, value);
+}
 
 /**
  * Clears the in-memory color cache. Useful for test suites and memory cleanup.
@@ -90,6 +110,8 @@ export function hslToRgb(h, s, l) {
 /**
  * Clamps saturation and lightness of an RGB color to safe visual ranges
  * to ensure colors are never muddy greys or blinding whites on obsidian surfaces.
+ * If the input color is achromatic / monochrome (saturation < 0.08),
+ * it returns the signature steel-periwinkle fallback to prevent false-red hue shift.
  *
  * @param {number} r - Red channel [0, 255]
  * @param {number} g - Green channel [0, 255]
@@ -110,6 +132,12 @@ export function clampHsl(
   maxL = 0.65
 ) {
   const { h, s, l } = rgbToHsl(r, g, b);
+
+  // Monochrome / grayscale guard: return default periwinkle if s < 0.08
+  if (s < 0.08) {
+    return { ...DEFAULT_RGB_OBJ };
+  }
+
   const clampedS = Math.max(minS, Math.min(maxS, s));
   const clampedL = Math.max(minL, Math.min(maxL, l));
   return hslToRgb(h, clampedS, clampedL);
@@ -141,25 +169,59 @@ export async function extractDominantColor(imageUrl, options = {}) {
 
   return new Promise((resolve) => {
     let settled = false;
+    let canvasRef = null;
+    let imgRef = null;
+    let timeoutId = null;
+
+    const cleanup = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      if (imgRef) {
+        imgRef.onload = null;
+        imgRef.onerror = null;
+      }
+      if (canvasRef) {
+        canvasRef.width = 0;
+        canvasRef.height = 0;
+      }
+    };
+
     const safeResolve = (val) => {
       if (!settled) {
         settled = true;
+        cleanup();
         resolve(val);
       }
     };
 
+    const timeoutMs = typeof options.timeoutMs === 'number' ? options.timeoutMs : 4000;
+
+    // 4000ms timeout (or custom timeoutMs) so stalled network requests do not leave promises hanging
+    timeoutId = setTimeout(() => {
+      setCache(imageUrl, DEFAULT_RGB);
+      safeResolve(DEFAULT_RGB);
+    }, timeoutMs);
+
+    if (timeoutId && typeof timeoutId.unref === 'function') {
+      timeoutId.unref();
+    }
+
     try {
       const img = new ImgConstructor();
+      imgRef = img;
       img.crossOrigin = 'Anonymous';
 
       img.onload = () => {
         try {
           const canvas = doc.createElement('canvas');
+          canvasRef = canvas;
           canvas.width = 32;
           canvas.height = 32;
           const ctx = canvas.getContext('2d');
           if (!ctx) {
-            colorCache.set(imageUrl, DEFAULT_RGB);
+            setCache(imageUrl, DEFAULT_RGB);
             return safeResolve(DEFAULT_RGB);
           }
 
@@ -194,7 +256,7 @@ export async function extractDominantColor(imageUrl, options = {}) {
           }
 
           if (count === 0) {
-            colorCache.set(imageUrl, DEFAULT_RGB);
+            setCache(imageUrl, DEFAULT_RGB);
             return safeResolve(DEFAULT_RGB);
           }
 
@@ -205,22 +267,22 @@ export async function extractDominantColor(imageUrl, options = {}) {
           const clamped = clampHsl(avgR, avgG, avgB);
           const result = `${clamped.r}, ${clamped.g}, ${clamped.b}`;
 
-          colorCache.set(imageUrl, result);
+          setCache(imageUrl, result);
           safeResolve(result);
         } catch {
-          colorCache.set(imageUrl, DEFAULT_RGB);
+          setCache(imageUrl, DEFAULT_RGB);
           safeResolve(DEFAULT_RGB);
         }
       };
 
       img.onerror = () => {
-        colorCache.set(imageUrl, DEFAULT_RGB);
+        setCache(imageUrl, DEFAULT_RGB);
         safeResolve(DEFAULT_RGB);
       };
 
       img.src = imageUrl;
     } catch {
-      colorCache.set(imageUrl, DEFAULT_RGB);
+      setCache(imageUrl, DEFAULT_RGB);
       safeResolve(DEFAULT_RGB);
     }
   });

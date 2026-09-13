@@ -12,7 +12,7 @@ import { useNowPlaying } from './hooks/useNowPlaying';
 import { playReminder, getWellnessPrompt } from './utils/soundManager';
 import { getCurrentSound, play as ambientPlay, stop as ambientStop } from './utils/ambientPlayer';
 import { notifyPhaseComplete, notifyReminder } from './utils/notificationManager';
-import { extractDominantColor } from './utils/colorExtractor';
+import { extractDominantColor, DEFAULT_RGB } from './utils/colorExtractor';
 import DevFeedbackOverlay from './components/DevFeedback/DevFeedbackOverlay';
 import styles from './App.module.css';
 
@@ -161,11 +161,12 @@ export default function App() {
         }
       });
     } else {
-      document.documentElement.style.setProperty('--media-dominant-rgb', '92, 119, 189');
+      document.documentElement.style.setProperty('--media-dominant-rgb', DEFAULT_RGB);
     }
 
     return () => {
       isMounted = false;
+      document.documentElement.style.setProperty('--media-dominant-rgb', DEFAULT_RGB);
     };
   }, [nowPlaying?.artwork, nowPlaying?.isPlaying]);
 
