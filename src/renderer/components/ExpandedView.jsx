@@ -11,9 +11,13 @@ import {
   setVolume as ambientSetVolume,
   getCurrentSound,
   getVolume,
+  isPlaying as ambientIsPlaying,
+  getFrequencyLevels as ambientGetFrequencyLevels,
 } from '../utils/ambientPlayer';
+import { initSystemAudio, getFrequencyLevels as getSystemAudioLevels } from '../utils/systemAudioListener';
 import { playUiClick } from '../utils/soundManager';
 import { parseTimeInput } from '../utils/timeInputParser';
+import { THEME_PALETTES } from '../../shared/constants';
 
 const TAB_ORDER = ['timer', 'tasks', 'audio', 'stats', 'settings'];
 
@@ -77,27 +81,44 @@ const NowPlayingCard = memo(function NowPlayingCard({ nowPlaying, soundEnabled, 
     };
   }, []);
 
+  useEffect(() => {
+    if (nowPlaying?.isPlaying) {
+      initSystemAudio()?.catch?.(() => {});
+    }
+  }, [nowPlaying?.isPlaying]);
+
   const handleMediaVolumeChange = useCallback((vol) => {
     setMediaVolumeState(vol);
     window.electronAPI?.setMediaVolume?.(vol);
   }, []);
 
+  const getAudioLevels = useCallback(() => {
+    const sysLevels = getSystemAudioLevels();
+    if (sysLevels) return sysLevels;
+    if (ambientIsPlaying?.()) {
+      return ambientGetFrequencyLevels?.();
+    }
+    return null;
+  }, []);
+
   if (!nowPlaying?.title) return null;
+
+  const isEqActive = Boolean(nowPlaying?.isPlaying || ambientIsPlaying?.());
 
   return (
     <div className={styles.nowPlayingCard}>
-      {/* Column 1: Artwork */}
+      {/* Column 1: Artwork (Scaled to anchor the media card) */}
       <div className={styles.nowPlayingArtCol}>
         {nowPlaying.artwork && !artworkError ? (
           <img
             src={nowPlaying.artwork}
-            alt=""
-            className={styles.nowPlayingThumb}
+            alt={nowPlaying.title ? `Album art for ${nowPlaying.title}` : 'Album art'}
+            className={`${styles.nowPlayingThumb} ${nowPlaying?.isPlaying ? styles.nowPlayingThumbActive : ''}`}
             onError={() => setArtworkError(true)}
           />
         ) : (
           <div className={styles.nowPlayingThumbPlaceholder}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <circle cx="12" cy="12" r="3" />
             </svg>
@@ -108,10 +129,12 @@ const NowPlayingCard = memo(function NowPlayingCard({ nowPlaying, soundEnabled, 
       {/* Column 2: Track Metadata & Transport Controls */}
       <div className={styles.nowPlayingMetaCol}>
         <div className={styles.nowPlayingMeta}>
-          <span className={styles.nowPlayingTitle} title={nowPlaying.title}>
-            {nowPlaying.title}
-          </span>
-          <span className={styles.nowPlayingArtist} title={nowPlaying.artist}>
+          <div className={styles.nowPlayingTitleWrapper}>
+            <span className={styles.nowPlayingTitle} title={nowPlaying.title}>
+              {nowPlaying.title}
+            </span>
+          </div>
+          <span className={styles.nowPlayingArtist} title={nowPlaying.artist || 'Media Audio'}>
             {nowPlaying.artist || 'Media Audio'}
           </span>
         </div>
@@ -119,12 +142,13 @@ const NowPlayingCard = memo(function NowPlayingCard({ nowPlaying, soundEnabled, 
         <div className={styles.nowPlayingControls}>
           <button
             type="button"
-            className={styles.mediaMiniBtn}
+            className={styles.mediaNavBtn}
             onClick={() => {
               if (soundEnabled) playUiClick?.();
               nowPlaying.prev?.();
             }}
             title="Previous track"
+            aria-label="Previous track"
           >
             <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
               <polygon points="19 20 9 12 19 4 19 20" />
@@ -134,20 +158,21 @@ const NowPlayingCard = memo(function NowPlayingCard({ nowPlaying, soundEnabled, 
 
           <button
             type="button"
-            className={`${styles.mediaMiniBtn} ${nowPlaying?.isPlaying ? styles.mediaMiniBtnActive : ''}`}
+            className={`${styles.mediaPlayBtn} ${nowPlaying?.isPlaying ? styles.mediaPlayBtnActive : ''}`}
             onClick={() => {
               if (soundEnabled) playUiClick?.();
               nowPlaying.playPause?.();
             }}
             title={nowPlaying?.isPlaying ? 'Pause track' : 'Play track'}
+            aria-label={nowPlaying?.isPlaying ? 'Pause track' : 'Play track'}
           >
             {nowPlaying?.isPlaying ? (
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-                <rect x="6" y="4" width="4" height="16" rx="1" />
-                <rect x="14" y="4" width="4" height="16" rx="1" />
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="4" width="4" height="16" rx="1.2" />
+                <rect x="14" y="4" width="4" height="16" rx="1.2" />
               </svg>
             ) : (
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style={{ marginLeft: '1.5px' }}>
                 <polygon points="6 4 20 12 6 20 6 4" />
               </svg>
             )}
@@ -155,12 +180,13 @@ const NowPlayingCard = memo(function NowPlayingCard({ nowPlaying, soundEnabled, 
 
           <button
             type="button"
-            className={styles.mediaMiniBtn}
+            className={styles.mediaNavBtn}
             onClick={() => {
               if (soundEnabled) playUiClick?.();
               nowPlaying.next?.();
             }}
             title="Next track"
+            aria-label="Next track"
           >
             <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
               <polygon points="5 4 15 12 5 20 5 4" />
@@ -172,7 +198,11 @@ const NowPlayingCard = memo(function NowPlayingCard({ nowPlaying, soundEnabled, 
 
       {/* Column 3: VFD Equalizer */}
       <div className={styles.nowPlayingEqCol}>
-        <VfdEqualizer isPlaying={Boolean(nowPlaying?.isPlaying)} />
+        <VfdEqualizer
+          isPlaying={isEqActive}
+          volume={mediaVolume}
+          getExternalLevels={getAudioLevels}
+        />
       </div>
 
       {/* Column 4: Hairline Divider & Skeuomorphic Volume Fader */}
@@ -230,10 +260,45 @@ export default function ExpandedView({
   notchSettings = {},
   onUpdateNotchSetting,
   onResetNotchSettings,
+  // Accent theme
+  accentTheme = 'classic',
+  onSetAccentTheme,
   horizontalOffset = 0,
   onResetPosition,
   onReplayOnboarding,
+  onContentHeightChange,
 }) {
+  const timerMeasurerRef = useRef(null);
+
+  useEffect(() => {
+    if (activeTab !== 'timer') {
+      onContentHeightChange?.(null);
+      return;
+    }
+    const el = timerMeasurerRef.current;
+    if (!el || typeof onContentHeightChange !== 'function') return;
+
+    const measure = () => {
+      const naturalHeight = el.offsetHeight;
+      if (naturalHeight > 50) {
+        // 28px navBar + 8px nav margin + 20px container padding = 56px chrome
+        onContentHeightChange(naturalHeight + 56);
+      }
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [
+    activeTab,
+    isOvertime,
+    pomodoroState,
+    wellnessPrompt,
+    activeTask,
+    onContentHeightChange,
+  ]);
+
   const [newNoteText, setNewNoteText] = useState('');
   const [customTimerName, setCustomTimerName] = useState('');
   const [customTimerMins, setCustomTimerMins] = useState('');
@@ -644,7 +709,7 @@ export default function ExpandedView({
           >
             {/* TAB 1: TIMER (Hero Pomodoro) */}
         {activeTab === 'timer' && (
-          <div className={styles.timerTab}>
+          <div ref={timerMeasurerRef} className={styles.timerTab}>
             {/* Hero Countdown Readout */}
             <div className={styles.heroTimer}>
               {isEditingHeroTime ? (
@@ -1347,6 +1412,39 @@ export default function ExpandedView({
                           >
                             {opt.label}
                           </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Accent Theme Gradient Swatch Selector */}
+                <div className={`${styles.settingsRow} ${styles.settingsRowTwoLine}`}>
+                  <div className={styles.rowLabelGroup}>
+                    <span className={styles.rowLabel}>Accent theme</span>
+                    <span className={styles.rowSubtitle}>
+                      {THEME_PALETTES[accentTheme]?.name ?? 'Classic Periwinkle'}
+                    </span>
+                  </div>
+                  <div className={styles.rowControl}>
+                    <div className={styles.themeSwatchRow} role="radiogroup" aria-label="Accent theme">
+                      {Object.values(THEME_PALETTES).map((palette) => {
+                        const isActive = (accentTheme || 'classic') === palette.id;
+                        return (
+                          <button
+                            key={palette.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={isActive}
+                            aria-label={palette.name}
+                            title={palette.name}
+                            className={`${styles.themeSwatchBtn} ${isActive ? styles.themeSwatchBtnActive : ''}`}
+                            style={{ background: palette.swatchGradient }}
+                            onClick={() => {
+                              if (soundEnabled) playUiClick();
+                              onSetAccentTheme?.(palette.id);
+                            }}
+                          />
                         );
                       })}
                     </div>
