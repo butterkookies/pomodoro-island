@@ -79,7 +79,7 @@ export function usePomodoro() {
   const setDuration = useCallback((key, value) => {
     // If value >= 1000, treat as milliseconds; otherwise treat as minutes
     const ms = value >= 1000 ? value : value * 60 * 1000;
-    const clampedMs = Math.max(60 * 1000, Math.min(120 * 60 * 1000, ms));
+    const clampedMs = Math.max(60 * 1000, Math.min(180 * 60 * 1000, ms));
     setDurationsState(prev => ({ ...prev, [key]: clampedMs }));
   }, []);
 

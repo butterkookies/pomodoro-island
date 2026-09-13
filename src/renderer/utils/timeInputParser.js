@@ -18,16 +18,16 @@ export function parseTimeInput(input, options = {}) {
 
   let totalMs = null;
 
-  // Pattern 1: mm:ss (or m:ss)
-  const colonMatch = raw.match(/^(\d{1,4}):(\d{1,2})$/);
+  // Pattern 1: mm:ss (or m:ss) with optional spaces around colon (e.g. '25 : 00')
+  const colonMatch = raw.match(/^(\d{1,4})\s*:\s*(\d{1,2})$/);
   if (colonMatch) {
     const mins = parseInt(colonMatch[1], 10);
     const secs = parseInt(colonMatch[2], 10);
     if (secs >= 60) return null;
     totalMs = (mins * 60 + secs) * 1000;
   } else {
-    // Pattern 2: 1h30m / 1h 30m / 1h / 90m
-    const hourMinMatch = raw.match(/^(?:(\d+(?:\.\d+)?)h)?\s*(?:(\d+)m)?$/);
+    // Pattern 2: Shorthand & colloquial hours/minutes (e.g. '1h30m', '1 hr 30 mins', '90min', '2 hrs')
+    const hourMinMatch = raw.match(/^(?:(\d+(?:\.\d+)?)\s*(?:h|hr|hrs))?\s*(?:(\d+)\s*(?:m|min|mins))?$/);
     if (hourMinMatch && (hourMinMatch[1] || hourMinMatch[2])) {
       const hours = hourMinMatch[1] ? parseFloat(hourMinMatch[1]) : 0;
       const mins = hourMinMatch[2] ? parseInt(hourMinMatch[2], 10) : 0;

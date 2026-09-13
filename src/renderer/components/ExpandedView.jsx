@@ -128,6 +128,7 @@ export default function ExpandedView({
 
   useEffect(() => {
     if (isRunning && isEditingHeroTime) {
+      isCancellingHeroRef.current = true;
       setIsEditingHeroTime(false);
     }
   }, [isRunning, isEditingHeroTime]);
@@ -154,7 +155,6 @@ export default function ExpandedView({
     if (ms) {
       const targetPhase = (pomodoroState === 'SHORT_BREAK' || pomodoroState === 'LONG_BREAK') ? pomodoroState : 'FOCUS';
       onSetDuration?.(targetPhase, ms);
-      onReset?.();
     }
     setIsEditingHeroTime(false);
     setTimeout(() => {
@@ -165,9 +165,11 @@ export default function ExpandedView({
   const handleHeroKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      e.stopPropagation();
       handleCommitHeroTime();
     } else if (e.key === 'Escape') {
       e.preventDefault();
+      e.stopPropagation();
       isCancellingHeroRef.current = true;
       setIsEditingHeroTime(false);
     }
@@ -207,9 +209,11 @@ export default function ExpandedView({
   const handleStepperKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      e.stopPropagation();
       handleCommitStepper();
     } else if (e.key === 'Escape') {
       e.preventDefault();
+      e.stopPropagation();
       isCancellingStepperRef.current = true;
       setEditingStepper(null);
     }
@@ -513,11 +517,21 @@ export default function ExpandedView({
                   onKeyDown={handleHeroKeyDown}
                   onBlur={handleCommitHeroTime}
                   placeholder="mm:ss"
+                  aria-label="Timer duration input"
                 />
               ) : (
                 <span
                   className={`${styles.heroTime} ${!isRunning ? styles.heroTimeEditable : ''}`}
                   onClick={handleStartEditHeroTime}
+                  onKeyDown={(e) => {
+                    if (!isRunning && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault();
+                      handleStartEditHeroTime();
+                    }
+                  }}
+                  tabIndex={!isRunning ? 0 : undefined}
+                  role={!isRunning ? 'button' : undefined}
+                  aria-label={!isRunning ? 'Edit timer duration' : 'Timer countdown'}
                   title={!isRunning ? 'Click to edit duration' : undefined}
                 >
                   {timeDisplay}
@@ -994,6 +1008,7 @@ export default function ExpandedView({
                           onChange={(e) => setStepperInputVal(e.target.value)}
                           onKeyDown={handleStepperKeyDown}
                           onBlur={handleCommitStepper}
+                          aria-label="Focus duration in minutes"
                         />
                       ) : (
                         <span
@@ -1002,6 +1017,16 @@ export default function ExpandedView({
                             const mins = Math.round((durations.FOCUS || 25 * 60 * 1000) / 60000);
                             handleStartEditStepper('FOCUS', mins);
                           }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              const mins = Math.round((durations.FOCUS || 25 * 60 * 1000) / 60000);
+                              handleStartEditStepper('FOCUS', mins);
+                            }
+                          }}
+                          tabIndex={0}
+                          role="button"
+                          aria-label="Edit focus duration"
                           title="Click to edit focus duration"
                         >
                           {Math.round((durations.FOCUS || 25 * 60 * 1000) / 60000)}m
@@ -1054,6 +1079,7 @@ export default function ExpandedView({
                           onChange={(e) => setStepperInputVal(e.target.value)}
                           onKeyDown={handleStepperKeyDown}
                           onBlur={handleCommitStepper}
+                          aria-label="Short break duration in minutes"
                         />
                       ) : (
                         <span
@@ -1062,6 +1088,16 @@ export default function ExpandedView({
                             const mins = Math.round((durations.SHORT_BREAK || 5 * 60 * 1000) / 60000);
                             handleStartEditStepper('SHORT_BREAK', mins);
                           }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              const mins = Math.round((durations.SHORT_BREAK || 5 * 60 * 1000) / 60000);
+                              handleStartEditStepper('SHORT_BREAK', mins);
+                            }
+                          }}
+                          tabIndex={0}
+                          role="button"
+                          aria-label="Edit short break duration"
                           title="Click to edit short break duration"
                         >
                           {Math.round((durations.SHORT_BREAK || 5 * 60 * 1000) / 60000)}m
@@ -1114,6 +1150,7 @@ export default function ExpandedView({
                           onChange={(e) => setStepperInputVal(e.target.value)}
                           onKeyDown={handleStepperKeyDown}
                           onBlur={handleCommitStepper}
+                          aria-label="Long break duration in minutes"
                         />
                       ) : (
                         <span
@@ -1122,6 +1159,16 @@ export default function ExpandedView({
                             const mins = Math.round((durations.LONG_BREAK || 15 * 60 * 1000) / 60000);
                             handleStartEditStepper('LONG_BREAK', mins);
                           }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              const mins = Math.round((durations.LONG_BREAK || 15 * 60 * 1000) / 60000);
+                              handleStartEditStepper('LONG_BREAK', mins);
+                            }
+                          }}
+                          tabIndex={0}
+                          role="button"
+                          aria-label="Edit long break duration"
                           title="Click to edit long break duration"
                         >
                           {Math.round((durations.LONG_BREAK || 15 * 60 * 1000) / 60000)}m

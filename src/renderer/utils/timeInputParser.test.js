@@ -3,9 +3,13 @@ import assert from 'node:assert/strict';
 import { parseTimeInput } from './timeInputParser.js';
 
 describe('parseTimeInput', () => {
-  it('parses standard mm:ss format', () => {
+  it('parses standard mm:ss format and handles spaces around colon', () => {
     assert.equal(parseTimeInput('25:00'), 25 * 60 * 1000);
+    assert.equal(parseTimeInput('25 : 00'), 25 * 60 * 1000);
+    assert.equal(parseTimeInput('25: 00'), 25 * 60 * 1000);
+    assert.equal(parseTimeInput('25 :00'), 25 * 60 * 1000);
     assert.equal(parseTimeInput('45:30'), 45.5 * 60 * 1000);
+    assert.equal(parseTimeInput('45 : 30'), 45.5 * 60 * 1000);
     assert.equal(parseTimeInput('01:15'), 75 * 1000);
     assert.equal(parseTimeInput('1:00'), 60 * 1000);
     assert.equal(parseTimeInput('90:00'), 90 * 60 * 1000);
@@ -24,13 +28,25 @@ describe('parseTimeInput', () => {
     assert.equal(parseTimeInput('180'), 180 * 60 * 1000);
   });
 
-  it('parses shorthand strings like 90m, 1h, 1h30m, 2h', () => {
+  it('parses shorthand and colloquial strings like 90m, 1h, 1h30m, 2h, min, mins, hr, hrs', () => {
     assert.equal(parseTimeInput('90m'), 90 * 60 * 1000);
+    assert.equal(parseTimeInput('90min'), 90 * 60 * 1000);
+    assert.equal(parseTimeInput('90mins'), 90 * 60 * 1000);
+    assert.equal(parseTimeInput('90 min'), 90 * 60 * 1000);
+    assert.equal(parseTimeInput('90 mins'), 90 * 60 * 1000);
     assert.equal(parseTimeInput('1h'), 60 * 60 * 1000);
+    assert.equal(parseTimeInput('1hr'), 60 * 60 * 1000);
+    assert.equal(parseTimeInput('1hrs'), 60 * 60 * 1000);
+    assert.equal(parseTimeInput('1 hr'), 60 * 60 * 1000);
+    assert.equal(parseTimeInput('1 hrs'), 60 * 60 * 1000);
     assert.equal(parseTimeInput('1h30m'), 90 * 60 * 1000);
     assert.equal(parseTimeInput('1h 30m'), 90 * 60 * 1000);
+    assert.equal(parseTimeInput('1hr 30min'), 90 * 60 * 1000);
+    assert.equal(parseTimeInput('1 hr 30 mins'), 90 * 60 * 1000);
     assert.equal(parseTimeInput('2h'), 120 * 60 * 1000);
+    assert.equal(parseTimeInput('2 hrs'), 120 * 60 * 1000);
     assert.equal(parseTimeInput('1.5h'), 90 * 60 * 1000);
+    assert.equal(parseTimeInput('1.5 hrs'), 90 * 60 * 1000);
   });
 
   it('enforces min and max bounds', () => {
