@@ -26,12 +26,12 @@ Inspired by Apple's Dynamic Island. Designed for uninterrupted flow.
     <td align="center" width="50%">
       <b>Windows Installer</b><br />
       <sub>1-click setup with desktop shortcut</sub><br /><br />
-      <a href="https://github.com/butterkookies/pomodoro-island/releases/latest"><b>Download Setup.exe</b></a>
+      <a href="https://github.com/butterkookies/pomodoro-island/releases/download/v1.0.0/pomodoro-island-1.0.0.Setup.exe"><b>Download Setup.exe</b></a>
     </td>
     <td align="center" width="50%">
       <b>Portable Edition</b><br />
       <sub>No installation required — extract and run</sub><br /><br />
-      <a href="https://github.com/butterkookies/pomodoro-island/releases/latest"><b>Download Portable .zip</b></a>
+      <a href="https://github.com/butterkookies/pomodoro-island/releases/download/v1.0.0/pomodoro-island-win32-x64-1.0.0.zip"><b>Download Portable .zip</b></a>
     </td>
   </tr>
 </table>
@@ -93,7 +93,7 @@ Control your timer from any app without interrupting your workflow:
 ## Getting Started
 
 ### 1. Download & Launch
-1. Download **`pomodoro-island-1.0.0 Setup.exe`** from [Releases](https://github.com/butterkookies/pomodoro-island/releases/latest).
+1. Download [**`pomodoro-island-1.0.0 Setup.exe`**](https://github.com/butterkookies/pomodoro-island/releases/download/v1.0.0/pomodoro-island-1.0.0.Setup.exe) (or the [Portable Edition](https://github.com/butterkookies/pomodoro-island/releases/download/v1.0.0/pomodoro-island-win32-x64-1.0.0.zip)).
 2. Run the installer. The island automatically anchors to the top notch of your primary monitor.
 3. Hover over the notch to glance at your timer, or click to expand.
 
