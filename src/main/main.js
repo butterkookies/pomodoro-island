@@ -782,6 +782,9 @@ Add-Type -TypeDefinition $def
     const clamped = Math.max(0, Math.min(1, numericVol));
     currentMediaVolume = clamped;
     setSystemVolume(clamped);
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('media-volume-update', clamped);
+    }
   });
 
   app.on('activate', () => {

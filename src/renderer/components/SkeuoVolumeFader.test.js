@@ -228,6 +228,7 @@ describe('SkeuoVolumeFader Component & Audio Math Engine', () => {
     it('renders with accessibility attributes: role="slider", tabIndex=0, aria labels', () => {
       const html = renderToStaticMarkup(React.createElement(SkeuoVolumeFader));
       assert.ok(html.includes('role="slider"'));
+      assert.ok(html.includes('aria-orientation="vertical"'));
       assert.ok(html.includes('tabindex="0"'));
       assert.ok(html.includes('aria-label="Media volume"'));
       assert.ok(html.includes('aria-valuemin="0"'));

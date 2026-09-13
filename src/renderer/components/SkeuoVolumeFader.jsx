@@ -99,7 +99,7 @@ export default function SkeuoVolumeFader({
   const isDraggingRef = useRef(false);
 
   useEffect(() => {
-    if (typeof initialVolume === 'number') {
+    if (typeof initialVolume === 'number' && !isDraggingRef.current) {
       setVolume(applyMagneticSnap(clampVolume(initialVolume)));
     }
   }, [initialVolume]);
@@ -173,6 +173,12 @@ export default function SkeuoVolumeFader({
     } else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
       e.preventDefault();
       nextT = clampVolume(Math.round((volume - 0.05) * 100) / 100);
+    } else if (e.key === 'PageUp') {
+      e.preventDefault();
+      nextT = clampVolume(Math.round((volume + 0.10) * 100) / 100);
+    } else if (e.key === 'PageDown') {
+      e.preventDefault();
+      nextT = clampVolume(Math.round((volume - 0.10) * 100) / 100);
     } else if (e.key === 'Home') {
       e.preventDefault();
       nextT = 0.0;
@@ -198,6 +204,7 @@ export default function SkeuoVolumeFader({
         tabIndex={0}
         role="slider"
         aria-label="Media volume"
+        aria-orientation="vertical"
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(volume * 100)}
@@ -206,6 +213,7 @@ export default function SkeuoVolumeFader({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
+        onLostPointerCapture={handlePointerUp}
         onWheel={handleWheel}
         onKeyDown={handleKeyDown}
         onDoubleClick={handleDoubleClick}
@@ -214,7 +222,6 @@ export default function SkeuoVolumeFader({
         <div
           className={`${styles.faderKnob} ${isDragging ? styles.dragging : ''}`}
           style={{ top: `${knobTop}px` }}
-          onDoubleClick={handleDoubleClick}
         />
       </div>
       <div className={styles.volTag}>

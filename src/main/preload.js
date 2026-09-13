@@ -26,6 +26,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   mediaControl: (action) => ipcRenderer.send('media-control', action),
   getMediaVolume: () => ipcRenderer.invoke('get-media-volume'),
   setMediaVolume: (vol) => ipcRenderer.send('set-media-volume', vol),
+  onMediaVolumeUpdate: (callback) => {
+    const subscription = (_event, vol) => callback(vol);
+    ipcRenderer.on('media-volume-update', subscription);
+    return () => ipcRenderer.removeListener('media-volume-update', subscription);
+  },
   setTopMargin: (margin) => ipcRenderer.send('set-top-margin', margin),
   setCaptureVisibility: (type, value) => ipcRenderer.send('set-capture-visibility', { type, value }),
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
