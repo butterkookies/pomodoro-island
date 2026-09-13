@@ -1,0 +1,94 @@
+.faderChassis {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+  touch-action: none;
+}
+
+.faderTrack {
+  position: relative;
+  width: 20px;
+  height: 76px;
+  border-radius: 999px;
+  background: #101013;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 2.5px 5px rgba(0, 0, 0, 0.85),
+    inset 0 1px 2px rgba(0, 0, 0, 0.60),
+    0 1px 2px rgba(0, 0, 0, 0.40);
+  box-sizing: border-box;
+  cursor: pointer;
+  user-select: none;
+  touch-action: none;
+  outline: none;
+}
+
+.faderTrack:focus-visible {
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.faderSlotGroove {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  height: 56px;
+  border-radius: 1.5px;
+  background: #060608;
+  box-shadow:
+    inset 0 1.5px 3px rgba(0, 0, 0, 0.95),
+    inset 0 -0.5px 1px rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+
+.faderKnob {
+  position: absolute;
+  left: -2px;
+  width: 24px;
+  height: 18px;
+  border-radius: 3px;
+  box-sizing: border-box;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.65) 0px,
+      rgba(255, 255, 255, 0.65) 1px,
+      rgba(0, 0, 0, 0.35) 1px,
+      rgba(0, 0, 0, 0.35) 2px
+    ) center / 18px 6px no-repeat,
+    linear-gradient(180deg, #f2f3f6 0%, #90939c 100%);
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  box-shadow:
+    0 3px 6px rgba(0, 0, 0, 0.45),
+    0 1px 2px rgba(0, 0, 0, 0.30),
+    inset 0 1px 0 #ffffff,
+    inset 0 -1px 1px rgba(0, 0, 0, 0.25);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  transition: box-shadow 60ms ease-out;
+}
+
+.faderKnob:active,
+.faderKnob.dragging {
+  cursor: grabbing;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.50),
+    inset 0 1px 0 rgba(255, 255, 255, 0.40),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.35);
+}
+
+.volTag {
+  font-size: 9.5px;
+  font-weight: 700;
+  font-family: var(--font-timer);
+  color: #d8dbe0;
+  font-feature-settings: 'tnum' 1;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: -0.015em;
+  text-align: center;
+}

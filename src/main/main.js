@@ -671,6 +671,119 @@ Write-Output '{}'
     setTimeout(pollMedia, 350);
   });
 
+  // ── Windows Media Volume Controller (Core Audio PowerShell) ─────────
+  let currentMediaVolume = 0.70;
+  let lastVolumeExecTime = 0;
+  let volumeThrottleTimer = null;
+  let isSettingVolume = false;
+  let latestQueuedVolume = null;
+
+  function executeVolumeChange(vol) {
+    if (process.platform !== 'win32') {
+      isSettingVolume = false;
+      return;
+    }
+
+    isSettingVolume = true;
+    lastVolumeExecTime = Date.now();
+    const execVol = vol;
+    const volStr = execVol.toFixed(3);
+
+    const psScript = `
+$ProgressPreference = 'SilentlyContinue'
+$def = @'
+using System.Runtime.InteropServices;
+[Guid("5CDF2C82-841E-4546-9722-0CF74078229A"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+public interface IAudioEndpointVolume {
+    int f(); int g(); int h(); int j();
+    int SetMasterVolumeLevelScalar(float fLevel, System.Guid pguidEventContext);
+    int k();
+    int GetMasterVolumeLevelScalar(out float pfLevel);
+}
+[Guid("D666063F-1587-4E43-81F1-B948E807363F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+public interface IMMDevice {
+    int Activate(ref System.Guid id, int clsCtx, int activationParams, out IAudioEndpointVolume aev);
+}
+[Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+public interface IMMDeviceEnumerator {
+    int f();
+    int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice endpoint);
+}
+[ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")] public class MMDeviceEnumeratorComObject { }
+public class AudioVol {
+    public static void SetVolume(float vol) {
+        try {
+            var enumerator = new MMDeviceEnumeratorComObject() as IMMDeviceEnumerator;
+            IMMDevice dev = null;
+            enumerator.GetDefaultAudioEndpoint(0, 1, out dev);
+            var epId = new System.Guid("5CDF2C82-841E-4546-9722-0CF74078229A");
+            IAudioEndpointVolume ep = null;
+            dev.Activate(ref epId, 23, 0, out ep);
+            ep.SetMasterVolumeLevelScalar(vol, System.Guid.Empty);
+        } catch {}
+    }
+}
+'@
+Add-Type -TypeDefinition $def
+[AudioVol]::SetVolume(${volStr})
+`;
+    const b64 = Buffer.from(psScript, 'utf16le').toString('base64');
+    exec(`powershell -NoProfile -NonInteractive -EncodedCommand ${b64}`, { timeout: 2500, windowsHide: true }, (_err) => {
+      isSettingVolume = false;
+      if (latestQueuedVolume !== null && Math.abs(latestQueuedVolume - execVol) > 0.001) {
+        const remaining = Math.max(0, 60 - (Date.now() - lastVolumeExecTime));
+        if (remaining > 0) {
+          if (!volumeThrottleTimer) {
+            volumeThrottleTimer = setTimeout(() => {
+              volumeThrottleTimer = null;
+              if (latestQueuedVolume !== null && !isSettingVolume) {
+                const next = latestQueuedVolume;
+                executeVolumeChange(next);
+              }
+            }, remaining);
+          }
+        } else {
+          const next = latestQueuedVolume;
+          executeVolumeChange(next);
+        }
+      }
+    });
+  }
+
+  function setSystemVolume(vol) {
+    const targetVol = Math.max(0, Math.min(1, Number(vol) || 0));
+    latestQueuedVolume = targetVol;
+
+    const now = Date.now();
+    const elapsed = now - lastVolumeExecTime;
+
+    if (isSettingVolume) {
+      return;
+    }
+
+    if (elapsed >= 60) {
+      executeVolumeChange(targetVol);
+    } else if (!volumeThrottleTimer) {
+      volumeThrottleTimer = setTimeout(() => {
+        volumeThrottleTimer = null;
+        if (latestQueuedVolume !== null && !isSettingVolume) {
+          const nextVol = latestQueuedVolume;
+          executeVolumeChange(nextVol);
+        }
+      }, 60 - elapsed);
+    }
+  }
+
+  ipcMain.handle('get-media-volume', () => currentMediaVolume);
+
+  ipcMain.on('set-media-volume', (_event, vol) => {
+    const numericVol = Number(vol);
+    if (!Number.isFinite(numericVol)) return;
+    const clamped = Math.max(0, Math.min(1, numericVol));
+    currentMediaVolume = clamped;
+    setSystemVolume(clamped);
+  });
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       win = createWindow();
