@@ -27,66 +27,70 @@ export const STEP_INTERVAL_MS = 85;
  * @param {number} t Time in seconds
  * @returns {number[]} Array of 8 segment heights clamped between 1 and 7
  */
-export function calculateFrequencyLevels(t = 0) {
+export function calculateFrequencyLevels(t = 0, volume = 1.0) {
+  // Volume scalar: logarithmic loudness curve
+  const vol = Math.max(0.05, Math.min(1.0, volume));
+  const energy = 0.35 + 0.65 * vol;
+
+  // Snappy, agile transients: 128 BPM rhythmic base, sharp attacks and instantaneous release
   // Phase 1: Bass Kick / Low Thump (Bands 1-2: 63Hz, 160Hz)
-  const kick = Math.pow(Math.max(0, Math.sin(t * 4.4)), 3.5);
-  const bassRhythm = Math.sin(t * 2.2) * 1.2;
+  const kick = Math.pow(Math.max(0, Math.sin(t * 5.2)), 5.0);
+  const bassBounce = Math.max(0, Math.sin(t * 5.2 + 0.3)) * 1.5;
 
   // Phase 2: Mid Vocal / Snare (Bands 4-5: 1kHz, 2.5kHz)
-  const snare = Math.pow(Math.max(0, Math.sin(t * 4.4 + Math.PI)), 3.0);
-  const vocalLead = Math.sin(t * 2.8) * 1.5 + Math.cos(t * 1.4) * 0.9;
+  const snare = Math.pow(Math.max(0, Math.sin(t * 5.2 + Math.PI)), 4.5);
+  const vocalLead = Math.max(0, Math.sin(t * 3.7)) * 1.6;
 
   // Phase 3: High Treble / Cymbal Sizzle (Bands 7-8: 10kHz, 16kHz)
-  const hihat = Math.pow(Math.max(0, Math.sin(t * 8.8)), 2.2);
-  const cymbalShimmer = Math.sin(t * 11.2) * 1.3 + Math.cos(t * 15.7) * 0.8;
+  const hihat = Math.pow(Math.max(0, Math.sin(t * 10.4)), 3.0);
+  const shimmer = Math.max(0, Math.sin(t * 15.6)) * 1.2;
 
-  // Intermediate frequencies:
-  // Band 3 (400Hz): warm low-mid body
-  const lowMidBody = Math.sin(t * 3.1 + 0.6) * 1.5 + Math.cos(t * 1.8) * 0.9;
-  // Band 6 (6.3kHz): harmonic presence
-  const presence = Math.sin(t * 4.5 + 1.2) * 1.6 + Math.cos(t * 7.2) * 0.8;
+  // Intermediate body frequencies
+  const lowMidBody = Math.max(0, Math.sin(t * 4.1)) * 1.4;
+  const presence = Math.max(0, Math.sin(t * 6.8)) * 1.5;
 
   const nextLevels = [];
 
   for (let i = 0; i < BANDS; i++) {
-    let raw = 2.0;
-    const jitter = Math.sin(t * 19.3 + i * 37.7) * 0.4;
+    // Fast, agile jitter to keep bars dancing on the spot
+    const microJitter = Math.sin(t * 26.5 + i * 41.3) * 0.45;
+    let raw = 1.0;
 
     switch (i) {
       case 0:
         // Column 1 (63Hz): Heavy sub-bass kick
-        raw = 1.8 + kick * 4.8 + bassRhythm * 0.8 + jitter;
+        raw = 1.1 + kick * 5.4 * energy + bassBounce * 0.5 * energy + microJitter;
         break;
       case 1:
         // Column 2 (160Hz): Bass thump & punch
-        raw = 2.0 + kick * 4.2 + Math.cos(t * 2.2) * 1.2 + jitter;
+        raw = 1.1 + kick * 4.9 * energy + bassBounce * 0.8 * energy + microJitter;
         break;
       case 2:
         // Column 3 (400Hz): Low-mid warmth
-        raw = 2.6 + lowMidBody + jitter;
+        raw = 1.2 + lowMidBody * 2.2 * energy + kick * 1.5 * energy + microJitter;
         break;
       case 3:
         // Column 4 (1kHz): Mid vocal fundamental & snare crack
-        raw = 2.0 + snare * 3.8 + vocalLead + jitter;
+        raw = 1.1 + snare * 4.6 * energy + vocalLead * 1.6 * energy + microJitter;
         break;
       case 4:
         // Column 5 (2.5kHz): Upper mid vocal articulation & snare attack
-        raw = 1.8 + snare * 3.4 + Math.cos(t * 3.2) * 1.4 + jitter;
+        raw = 1.1 + snare * 4.3 * energy + presence * 1.4 * energy + microJitter;
         break;
       case 5:
         // Column 6 (6.3kHz): Presence & guitar harmonics
-        raw = 2.3 + presence + hihat * 1.2 + jitter;
+        raw = 1.2 + presence * 2.0 * energy + hihat * 1.6 * energy + microJitter;
         break;
       case 6:
         // Column 7 (10kHz): Treble / hi-hat sizzle
-        raw = 1.8 + hihat * 3.6 + cymbalShimmer * 0.9 + jitter;
+        raw = 1.1 + hihat * 4.4 * energy + shimmer * 1.2 * energy + microJitter;
         break;
       case 7:
         // Column 8 (16kHz): Air & high cymbal shimmer
-        raw = 1.5 + hihat * 3.2 + Math.sin(t * 13.5) * 1.2 + jitter;
+        raw = 1.1 + hihat * 4.1 * energy + shimmer * 1.5 * energy + microJitter;
         break;
       default:
-        raw = 2.0;
+        raw = 1.2;
     }
 
     const clamped = Math.max(1, Math.min(SEGMENTS, Math.round(raw)));
@@ -160,7 +164,12 @@ export function getSegmentTypeClass(segIdx) {
   return styles.base;
 }
 
-function VfdEqualizer({ isPlaying = false, className = '' }) {
+function VfdEqualizer({
+  isPlaying = false,
+  getExternalLevels = null,
+  volume = 1.0,
+  className = '',
+}) {
   // Resting state: 0 active levels (base segment illuminated faintly via resting class)
   const [levels, setLevels] = useState(() =>
     isPlaying ? [3, 4, 5, 4, 3, 4, 3, 2] : Array(BANDS).fill(0)
@@ -200,19 +209,48 @@ function VfdEqualizer({ isPlaying = false, className = '' }) {
       }
     };
 
+    const mediaQuery =
+      typeof window !== 'undefined' && window.matchMedia
+        ? window.matchMedia('(prefers-reduced-motion: reduce)')
+        : null;
+
     const startAnimation = () => {
       stopAnimation();
+      const isReduced = Boolean(mediaQuery?.matches);
+      const stepInterval = isReduced ? 160 : 40;
+
       let t = timeRef.current;
       intervalId = setInterval(() => {
-        t += STEP_INTERVAL_MS / 1000;
+        t += stepInterval / 1000;
         timeRef.current = t;
 
-        const nextLevels = calculateFrequencyLevels(t);
+        // Try getting real audio levels first (e.g. from Web Audio AnalyserNode)
+        let nextLevels = typeof getExternalLevels === 'function' ? getExternalLevels() : null;
+
+        if (!Array.isArray(nextLevels) || nextLevels.length !== BANDS) {
+          if (isReduced) {
+            // Gentle, low-energy breathing motion: avoids rapid strobing while remaining alive
+            const breath = 0.5 + 0.5 * Math.sin(t * 1.5);
+            nextLevels = [
+              Math.round(2 + breath),
+              Math.round(2 + breath * 1.5),
+              Math.round(3 + breath),
+              Math.round(3 + breath * 1.2),
+              Math.round(2 + breath),
+              Math.round(2 + breath * 0.8),
+              Math.round(2 + breath * 0.5),
+              1,
+            ];
+          } else {
+            nextLevels = calculateFrequencyLevels(t, volume);
+          }
+        }
+
         const { nextPeaks, nextTimers } = calculateNextPeaks(
           nextLevels,
           peaksRef.current,
           timersRef.current,
-          STEP_INTERVAL_MS,
+          stepInterval,
           HOLD_TIME_MS
         );
 
@@ -221,35 +259,13 @@ function VfdEqualizer({ isPlaying = false, className = '' }) {
 
         setLevels(nextLevels);
         setPeaks(nextPeaks);
-      }, STEP_INTERVAL_MS);
+      }, stepInterval);
     };
 
-    const applyReducedMotion = () => {
-      stopAnimation();
-      const calmLevels = [2, 3, 4, 3, 3, 2, 2, 1];
-      peaksRef.current = calmLevels;
-      timersRef.current = Array(BANDS).fill(0);
-      setLevels(calmLevels);
-      setPeaks(calmLevels);
-    };
+    startAnimation();
 
-    const mediaQuery =
-      typeof window !== 'undefined' && window.matchMedia
-        ? window.matchMedia('(prefers-reduced-motion: reduce)')
-        : null;
-
-    if (mediaQuery?.matches) {
-      applyReducedMotion();
-    } else {
+    const handleMotionChange = () => {
       startAnimation();
-    }
-
-    const handleMotionChange = (e) => {
-      if (e.matches) {
-        applyReducedMotion();
-      } else {
-        startAnimation();
-      }
     };
 
     mediaQuery?.addEventListener?.('change', handleMotionChange);
@@ -258,7 +274,7 @@ function VfdEqualizer({ isPlaying = false, className = '' }) {
       stopAnimation();
       mediaQuery?.removeEventListener?.('change', handleMotionChange);
     };
-  }, [isPlaying]);
+  }, [isPlaying, getExternalLevels, volume]);
 
   return (
     <div

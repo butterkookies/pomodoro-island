@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('now-playing-update', subscription);
   },
   getNowPlaying: () => ipcRenderer.invoke('get-now-playing'),
+  getDesktopSources: () => ipcRenderer.invoke('get-desktop-sources'),
   mediaControl: (action) => ipcRenderer.send('media-control', action),
   getMediaVolume: () => ipcRenderer.invoke('get-media-volume'),
   setMediaVolume: (vol) => ipcRenderer.send('set-media-volume', vol),
@@ -33,6 +34,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   setTopMargin: (margin) => ipcRenderer.send('set-top-margin', margin),
   setCaptureVisibility: (type, value) => ipcRenderer.send('set-capture-visibility', { type, value }),
+  writeClipboard: (text) => ipcRenderer.send('write-clipboard', text),
+  readClipboard: () => ipcRenderer.invoke('read-clipboard'),
+  updateDevDockBounds: (bounds) => ipcRenderer.send('update-dev-dock-bounds', bounds),
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
   store: {
     get: (key, defaultValue) => ipcRenderer.sendSync('store-get', key, defaultValue),

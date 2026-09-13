@@ -311,33 +311,33 @@
 }
 
 .eqBar:nth-child(1) {
-  height: 4px;
-  animation: eqBounce1 0.75s ease-in-out infinite alternate;
+  height: 3px;
+  animation: eqBounce1 0.22s cubic-bezier(0.2, 0.9, 0.3, 1) infinite alternate;
 }
 
 .eqBar:nth-child(2) {
-  height: 10px;
-  animation: eqBounce2 0.6s ease-in-out infinite alternate;
+  height: 5px;
+  animation: eqBounce2 0.17s cubic-bezier(0.2, 0.9, 0.3, 1) infinite alternate;
 }
 
 .eqBar:nth-child(3) {
-  height: 6px;
-  animation: eqBounce3 0.85s ease-in-out infinite alternate;
+  height: 3.5px;
+  animation: eqBounce3 0.25s cubic-bezier(0.2, 0.9, 0.3, 1) infinite alternate;
 }
 
 @keyframes eqBounce1 {
-  0% { height: 3px; }
-  100% { height: 10px; }
+  0% { height: 2.5px; }
+  100% { height: 7.5px; }
 }
 
 @keyframes eqBounce2 {
-  0% { height: 10px; }
-  100% { height: 3px; }
+  0% { height: 3px; }
+  100% { height: 8.5px; }
 }
 
 @keyframes eqBounce3 {
-  0% { height: 4px; }
-  100% { height: 11px; }
+  0% { height: 2px; }
+  100% { height: 6.5px; }
 }
 
 .musicGlanceText {

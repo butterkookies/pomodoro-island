@@ -7,6 +7,7 @@ import OnboardingView from './Onboarding/OnboardingView';
 import styles from './Island.module.css';
 import { SPRING, SPRING_CONTAINER, SPRING_LIQUID, BEZEL_SNAP_THRESHOLD } from '../../shared/constants';
 import { playSnapHaptic } from '../utils/soundManager';
+import { getAudioEnergy } from '../utils/systemAudioListener';
 
 // Apple Dynamic Island view entry/exit transitions (scale 0.98->1 over 180ms, 1->0.99 over 100ms)
 const viewVariants = {
@@ -108,13 +109,14 @@ export default function Island({
   onReplayOnboarding,
 }) {
   const [isScratchpadOpen, setIsScratchpadOpen] = useState(false);
-  const [mins, secs] = (timeDisplay || '25:00').split(':');
+  const timeParts = (timeDisplay || '25:00').split(':');
   const isMediaActive = Boolean(nowPlaying?.isPlaying && nowPlaying?.title);
 
-  // Dynamic audio-reactive pulse animation for active media playback
+  // Dynamic audio-reactive pulse & spatial moving shadow animation for active media playback
   useEffect(() => {
     if (!isMediaActive) {
       islandRef?.current?.style.setProperty('--audio-pulse', '0');
+      islandRef?.current?.style.setProperty('--audio-shift-x', '0px');
       return;
     }
 
@@ -130,6 +132,7 @@ export default function Island({
         frameId = null;
       }
       islandRef?.current?.style.setProperty('--audio-pulse', fallbackValue);
+      islandRef?.current?.style.setProperty('--audio-shift-x', '0px');
     };
 
     const startAnimation = () => {
@@ -140,10 +143,28 @@ export default function Island({
       const startTime = performance.now();
       const animatePulse = (currentTime) => {
         const elapsed = (currentTime - startTime) / 1000;
-        // Smooth rhythmic pulse: composite sine waves simulating musical breathing
-        const pulse = 0.5 + 0.35 * Math.sin(elapsed * 4.2) + 0.15 * Math.sin(elapsed * 8.4);
+
+        // Query real-time audio energy if available from desktop loopback
+        const energy = getAudioEnergy?.();
+
+        let pulse = 0.35;
+        if (energy && typeof energy.overall === 'number') {
+          // Dynamic live audio reactivity: bass transients drive the radiant pulse
+          pulse = 0.25 + energy.bass * 0.55 + energy.overall * 0.20;
+        } else {
+          // Synthetic agile groove (128 BPM pulse with sub-beat micro-sway)
+          pulse = 0.35 + 0.35 * Math.pow(Math.max(0, Math.sin(elapsed * 5.2)), 3.0) + 0.15 * Math.sin(elapsed * 10.4);
+        }
         const clampedPulse = Math.max(0, Math.min(1, pulse));
-        islandRef?.current?.style.setProperty('--audio-pulse', clampedPulse.toFixed(3));
+
+        // Spatial horizontal drift: moving shadow gracefully floating across island base
+        const shiftX = Math.sin(elapsed * 1.8) * 12 + Math.sin(elapsed * 3.6) * 5;
+
+        if (islandRef?.current) {
+          islandRef.current.style.setProperty('--audio-pulse', clampedPulse.toFixed(3));
+          islandRef.current.style.setProperty('--audio-shift-x', `${shiftX.toFixed(1)}px`);
+        }
+
         frameId = requestAnimationFrame(animatePulse);
       };
       frameId = requestAnimationFrame(animatePulse);
@@ -242,17 +263,6 @@ export default function Island({
 
   const islandBg = (islandState === 'expanded' || isOnboarding) ? 'var(--pill-bg-expanded)' : 'var(--pill-bg)';
   const borderColor = (islandState !== 'idle' || isOnboarding) ? 'var(--pill-border)' : 'rgba(255, 255, 255, 0.08)';
-
-  const earConfig =
-    islandState === 'idle' && !isOnboarding
-      ? {
-          earWidth: notchSettings?.idleEarWidth ?? 10,
-          earHeight: notchSettings?.idleEarHeight ?? 9,
-        }
-      : {
-          earWidth: 15,
-          earHeight: 14,
-        };
 
   // Persisted horizontal offset along top monitor bezel
   const savedOffset = window.electronAPI?.store?.get('horizontalOffset', 0) ?? 0;
@@ -360,7 +370,6 @@ export default function Island({
     <motion.div
       ref={islandRef}
       className={`${styles.island} ${isMediaActive ? styles.islandMediaActive : ''}`}
-      layout
       drag="x"
       dragConstraints={{ left: -maxDrag, right: maxDrag }}
       dragElastic={0.12}
@@ -371,20 +380,21 @@ export default function Island({
       animate={{
         width: dims.width,
         height: dims.height,
-        scaleX: isDragging ? 1.015 : 1,
-        scaleY: isDragging ? 0.985 : 1,
+        scaleX: 1,
+        scaleY: 1,
       }}
       transition={SPRING_CONTAINER}
       style={{
         x,
         '--island-bg': islandBg,
         '--ear-border': borderColor,
+        transformOrigin: 'top center',
         borderRadius: radius,
         boxShadow: isMediaActive
           ? undefined
           : islandState !== 'idle'
-          ? '0 2px 5px rgba(0, 0, 0, 0.08), 0 8px 18px rgba(0, 0, 0, 0.16), 0 18px 36px rgba(0, 0, 0, 0.22), 0 32px 64px rgba(0, 0, 0, 0.16)'
-          : '0 2px 5px rgba(0, 0, 0, 0.08), 0 6px 16px rgba(0, 0, 0, 0.14), 0 12px 28px rgba(0, 0, 0, 0.10)',
+          ? '0 2px 10px rgba(255, 255, 255, 0.04), 0 8px 24px rgba(0, 0, 0, 0.45), 0 24px 48px rgba(0, 0, 0, 0.55)'
+          : '0 2px 8px rgba(255, 255, 255, 0.03), 0 6px 16px rgba(0, 0, 0, 0.35), 0 16px 32px rgba(0, 0, 0, 0.45)',
         position: 'relative',
       }}
       onMouseEnter={onMouseEnter}
@@ -392,67 +402,52 @@ export default function Island({
       onClick={onClick}
       onDoubleClick={handleResetPosition}
     >
-      {/* ── Magnetic Center Alignment Tick ── */}
+      {/* ── Magnetic Center Alignment Tick (Anchored to bottom edge; zero top bezel line) ── */}
       <motion.div
         className={styles.magneticGuideTick}
         initial={false}
         animate={{
           opacity: isSnapped && isDragging ? 1 : 0,
-          scaleY: isSnapped && isDragging ? 1 : 0.3,
+          scaleX: isSnapped && isDragging ? 1 : 0.4,
         }}
         transition={{ duration: 0.15 }}
       />
       {/* ── Left Concave Ear (Smooth Tangent Flare into Screen Bezel) ── */}
-      <motion.svg
+      <svg
         className={styles.notchEarLeft}
+        width="15"
+        height="14"
         viewBox="0 0 15 14"
         preserveAspectRatio="none"
         aria-hidden="true"
-        animate={{
-          width: earConfig.earWidth,
-          height: earConfig.earHeight,
-          left: -earConfig.earWidth + 1,
-        }}
-        transition={SPRING_CONTAINER}
-        style={{
-          opacity: 'var(--island-opacity, 0.95)',
-        }}
       >
-        <defs>
-          <linearGradient id="earStrokeLeft" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="var(--ear-border)" />
-            <stop offset="100%" stopColor="var(--ear-border)" />
-          </linearGradient>
-        </defs>
-        <path className={styles.earFill} d="M 0 0 C 7 0 14 7 14 14 L 15 14 L 15 0 Z" fill="#000000" />
-        <path d="M 0 0 C 7 0 14 7 14 14" stroke="url(#earStrokeLeft)" strokeWidth="1" vectorEffect="non-scaling-stroke" fill="none" />
-      </motion.svg>
+        <path className={styles.earFill} d="M 0 0 C 7 0 14 7 14 14 L 15 14 L 15 0 Z" fill="var(--island-bg, #000000)" />
+        <path d="M 0 0 C 7 0 14 7 14 14" stroke="var(--ear-border)" strokeWidth="1" vectorEffect="non-scaling-stroke" fill="none" />
+      </svg>
 
       {/* ── Right Concave Ear (Smooth Tangent Flare into Screen Bezel) ── */}
-      <motion.svg
+      <svg
         className={styles.notchEarRight}
+        width="15"
+        height="14"
         viewBox="0 0 15 14"
         preserveAspectRatio="none"
         aria-hidden="true"
-        animate={{
-          width: earConfig.earWidth,
-          height: earConfig.earHeight,
-          right: -earConfig.earWidth + 1,
-        }}
-        transition={SPRING_CONTAINER}
-        style={{
-          opacity: 'var(--island-opacity, 0.95)',
-        }}
       >
-        <defs>
-          <linearGradient id="earStrokeRight" x1="100%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="var(--ear-border)" />
-            <stop offset="100%" stopColor="var(--ear-border)" />
-          </linearGradient>
-        </defs>
-        <path className={styles.earFill} d="M 15 0 C 8 0 1 7 1 14 L 0 14 L 0 0 Z" fill="#000000" />
-        <path d="M 15 0 C 8 0 1 7 1 14" stroke="url(#earStrokeRight)" strokeWidth="1" vectorEffect="non-scaling-stroke" fill="none" />
-      </motion.svg>
+        <path className={styles.earFill} d="M 15 0 C 8 0 1 7 1 14 L 0 14 L 0 0 Z" fill="var(--island-bg, #000000)" />
+        <path d="M 15 0 C 8 0 1 7 1 14" stroke="var(--ear-border)" strokeWidth="1" vectorEffect="non-scaling-stroke" fill="none" />
+      </svg>
+
+      {/* ── Seamless Border Frame (Continuous with Flared Ears — No Vertical Seam) ── */}
+      <div
+        className={styles.islandBorderFrame}
+        style={{
+          borderRadius: radius,
+          borderLeft: `1px solid ${borderColor}`,
+          borderRight: `1px solid ${borderColor}`,
+          borderBottom: `1px solid ${borderColor}`,
+        }}
+      />
 
       {/* ── Inner Content Container ── */}
       <div
@@ -460,10 +455,6 @@ export default function Island({
         style={{
           borderRadius: radius,
           background: islandBg,
-          borderLeft: `1px solid ${borderColor}`,
-          borderRight: `1px solid ${borderColor}`,
-          borderBottom: `1px solid ${borderColor}`,
-          borderTop: 'none',
         }}
       >
         <AnimatePresence initial={false} mode="popLayout">
@@ -510,9 +501,10 @@ export default function Island({
                 )}
                 {showTime && (
                   <div className={styles.idleTimeWrapper}>
-                    <span className={styles.idleDigits}>{mins}</span>
-                    <span className={styles.idleColon}>:</span>
-                    <span className={styles.idleDigits}>{secs}</span>
+                    {timeParts.flatMap((part, idx) => [
+                      idx > 0 && <span key={`idle-colon-${idx}`} className={styles.idleColon}>:</span>,
+                      <span key={`idle-digit-${idx}`} className={styles.idleDigits}>{part}</span>,
+                    ]).filter(Boolean)}
                   </div>
                 )}
                 {showBar && (

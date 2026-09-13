@@ -32,8 +32,8 @@ export default function CompactView({
   // Clamp percent between 0 and 1 (represents remaining time left)
   const remainingPct = Math.max(0, Math.min(1, percent));
 
-  // Split digits to eliminate colon-digit tracking overlap
-  const [mins, secs] = (timeDisplay || '25:00').split(':');
+  // Split digits to eliminate colon-digit tracking overlap (supports mm:ss and hh:mm:ss)
+  const timeParts = (timeDisplay || '25:00').split(':');
 
   // Press-and-hold reset mechanics on Skip button
   const [holdProgress, setHoldProgress] = useState(0);
@@ -154,9 +154,10 @@ export default function CompactView({
       >
         {/* Bold Inter Time Readout with Isolated Colon */}
         <div className={styles.timeWrapper}>
-          <span className={styles.timeDigits}>{mins}</span>
-          <span className={styles.timeColon}>:</span>
-          <span className={styles.timeDigits}>{secs}</span>
+          {timeParts.flatMap((part, idx) => [
+            idx > 0 && <span key={`colon-${idx}`} className={styles.timeColon}>:</span>,
+            <span key={`digit-${idx}`} className={styles.timeDigits}>{part}</span>,
+          ]).filter(Boolean)}
         </div>
 
         {/* Satin Frosted Progress Track (28px Harmonized Height) */}

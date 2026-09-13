@@ -155,6 +155,26 @@ describe('VfdEqualizer Component & Engine', () => {
       assert.ok(maxTreble >= 5, `Treble sizzle should reach upper segments (>= 5), got ${maxTreble}`);
       assert.ok(minTreble <= 3, `Treble sizzle should dip (<= 3), got ${minTreble}`);
     });
+
+    it('scales dynamic range based on volume parameter', () => {
+      let highVolSum = 0;
+      let lowVolSum = 0;
+      const samples = 20;
+
+      for (let i = 0; i < samples; i++) {
+        const t = i * 0.15;
+        const highLevels = calculateFrequencyLevels(t, 1.0);
+        const lowLevels = calculateFrequencyLevels(t, 0.1);
+
+        highVolSum += highLevels.reduce((a, b) => a + b, 0);
+        lowVolSum += lowLevels.reduce((a, b) => a + b, 0);
+      }
+
+      assert.ok(
+        highVolSum > lowVolSum,
+        `Full volume average energy (${highVolSum}) should exceed low volume energy (${lowVolSum})`
+      );
+    });
   });
 
   describe('calculateNextPeaks (Peak-Hold Physics)', () => {
@@ -271,6 +291,19 @@ describe('VfdEqualizer Component & Engine', () => {
 
       assert.ok(html.includes('lit base'), 'Should include lit base segment');
       assert.ok(html.includes('lit mid') || html.includes('lit warn'), 'Should include higher frequency segment');
+    });
+
+    it('renders lit segments when external level provider returns custom levels', () => {
+      const mockGetLevels = () => [7, 6, 5, 4, 3, 2, 1, 1];
+      const html = renderToStaticMarkup(
+        React.createElement(VfdEqualizer, {
+          isPlaying: true,
+          getExternalLevels: mockGetLevels,
+          volume: 0.8,
+        })
+      );
+      assert.ok(html.includes('vfdContainer'));
+      assert.ok(html.includes('lit'));
     });
   });
 });

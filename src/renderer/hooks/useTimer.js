@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { playPhaseComplete } from '../utils/soundManager';
 
-export function useTimer(onComplete) {
+export function useTimer(onComplete, currentPhase = 'FOCUS') {
   const [remaining, setRemaining] = useState(0);
   const [percent, setPercent] = useState(1);
   const [isRunning, setIsRunning] = useState(false);
@@ -13,6 +13,7 @@ export function useTimer(onComplete) {
   const isRunningRef = useRef(false);
   const durationRef = useRef(0);
   const onCompleteRef = useRef(onComplete);
+  const currentPhaseRef = useRef(currentPhase);
   const allowOvertimeRef = useRef(true);
   const overtimeTimerRef = useRef(null);
   const overtimeMsRef = useRef(0);
@@ -20,6 +21,10 @@ export function useTimer(onComplete) {
   useEffect(() => {
     onCompleteRef.current = onComplete;
   }, [onComplete]);
+
+  useEffect(() => {
+    currentPhaseRef.current = currentPhase;
+  }, [currentPhase]);
 
   const finishOvertime = useCallback(() => {
     if (overtimeTimerRef.current) clearInterval(overtimeTimerRef.current);
@@ -60,6 +65,7 @@ export function useTimer(onComplete) {
         setPercent(safePercent);
       }
       if (data.type === 'COMPLETE') {
+        const phase = currentPhaseRef.current || 'FOCUS';
         if (allowOvertimeRef.current) {
           // Enter calm Flow Overtime mode
           setIsRunning(true);
@@ -68,7 +74,7 @@ export function useTimer(onComplete) {
           setOvertimeMs(0);
           overtimeMsRef.current = 0;
           setPercent(0);
-          playPhaseComplete();
+          playPhaseComplete(phase);
 
           if (overtimeTimerRef.current) clearInterval(overtimeTimerRef.current);
           overtimeTimerRef.current = setInterval(() => {
@@ -79,7 +85,7 @@ export function useTimer(onComplete) {
           setIsRunning(false);
           isRunningRef.current = false;
           setPercent(0);
-          playPhaseComplete();
+          playPhaseComplete(phase);
           onCompleteRef.current?.(durationRef.current);
         }
       }
@@ -208,8 +214,12 @@ export function useTimer(onComplete) {
 
 function formatTime(ms) {
   if (typeof ms !== 'number' || isNaN(ms) || ms < 0) return '00:00';
-  const s = Math.ceil(ms / 1000);
-  const m = Math.floor(s / 60).toString().padStart(2, '0');
-  const sec = (s % 60).toString().padStart(2, '0');
-  return `${m}:${sec}`;
+  const totalSecs = Math.ceil(ms / 1000);
+  const hours = Math.floor(totalSecs / 3600);
+  const mins = Math.floor((totalSecs % 3600) / 60);
+  const secs = totalSecs % 60;
+  if (hours > 0) {
+    return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }

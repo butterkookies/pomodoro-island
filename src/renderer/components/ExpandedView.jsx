@@ -15,8 +15,8 @@ import {
   getFrequencyLevels as ambientGetFrequencyLevels,
 } from '../utils/ambientPlayer';
 import { initSystemAudio, getFrequencyLevels as getSystemAudioLevels } from '../utils/systemAudioListener';
-import { playUiClick } from '../utils/soundManager';
-import { parseTimeInput } from '../utils/timeInputParser';
+import { playUiClick, ALARM_THEMES, previewSound } from '../utils/soundManager';
+import { parseTimeInput, formatDurationLabel } from '../utils/timeInputParser';
 import { THEME_PALETTES } from '../../shared/constants';
 
 const TAB_ORDER = ['timer', 'tasks', 'audio', 'stats', 'settings'];
@@ -340,10 +340,8 @@ export default function ExpandedView({
 
   const handleStartEditHeroTime = () => {
     if (isRunning) return;
-    const currentMinutes = Math.round(
-      ((durations && (durations[pomodoroState] || durations.FOCUS)) || 25 * 60 * 1000) / 60000
-    );
-    setHeroTimeInput(String(currentMinutes));
+    const currentMs = ((durations && (durations[pomodoroState] || durations.FOCUS)) || 25 * 60 * 1000);
+    setHeroTimeInput(formatDurationLabel(currentMs));
     isCancellingHeroRef.current = false;
     setIsEditingHeroTime(true);
   };
@@ -356,7 +354,7 @@ export default function ExpandedView({
     if (committingHeroRef.current) return;
     committingHeroRef.current = true;
 
-    const ms = parseTimeInput(heroTimeInput);
+    const ms = parseTimeInput(heroTimeInput, { minSeconds: 1, maxHours: 12 });
     if (ms) {
       const targetPhase = (pomodoroState === 'SHORT_BREAK' || pomodoroState === 'LONG_BREAK') ? pomodoroState : 'FOCUS';
       onSetDuration?.(targetPhase, ms);
@@ -380,8 +378,8 @@ export default function ExpandedView({
     }
   };
 
-  const handleStartEditStepper = (phase, currentMinutes) => {
-    setStepperInputVal(String(currentMinutes));
+  const handleStartEditStepper = (phase, currentMs) => {
+    setStepperInputVal(formatDurationLabel(currentMs));
     isCancellingStepperRef.current = false;
     setEditingStepper(phase);
   };
@@ -398,8 +396,8 @@ export default function ExpandedView({
     if (currentEditing) {
       const isFocus = currentEditing === 'FOCUS';
       const ms = parseTimeInput(stepperInputVal, {
-        minMinutes: 1,
-        maxMinutes: isFocus ? 180 : 60,
+        minSeconds: 1,
+        maxHours: isFocus ? 12 : 2,
       });
       if (ms) {
         onSetDuration?.(currentEditing, ms);
@@ -442,6 +440,12 @@ export default function ExpandedView({
   const [displays, setDisplays] = useState([]);
   const [soundEnabled, setSoundEnabled] = useState(() => {
     return window.electronAPI?.store?.get('soundEffectsEnabled') ?? true;
+  });
+  const [timerSoundEnabled, setTimerSoundEnabled] = useState(() => {
+    return window.electronAPI?.store?.get('timerSoundEnabled') ?? true;
+  });
+  const [timerSoundTheme, setTimerSoundTheme] = useState(() => {
+    return window.electronAPI?.store?.get('timerSoundTheme') ?? 'zen';
   });
   const [openAtLogin, setOpenAtLogin] = useState(false);
   const [topMargin, setTopMarginState] = useState(() => {
@@ -529,6 +533,23 @@ export default function ExpandedView({
     setSoundEnabled(next);
     window.electronAPI?.store?.set('soundEffectsEnabled', next);
     if (next) playUiClick();
+  }
+
+  function handleTimerSoundToggle() {
+    const next = !timerSoundEnabled;
+    setTimerSoundEnabled(next);
+    window.electronAPI?.store?.set('timerSoundEnabled', next);
+    if (soundEnabled) playUiClick();
+  }
+
+  function handleTimerThemeChange(themeKey) {
+    setTimerSoundTheme(themeKey);
+    window.electronAPI?.store?.set('timerSoundTheme', themeKey);
+    previewSound('FOCUS', themeKey);
+  }
+
+  function handlePreviewAlarm(phase) {
+    previewSound(phase, timerSoundTheme);
   }
 
   function handleToggleRecordings() {
@@ -721,7 +742,7 @@ export default function ExpandedView({
                   onChange={(e) => setHeroTimeInput(e.target.value)}
                   onKeyDown={handleHeroKeyDown}
                   onBlur={handleCommitHeroTime}
-                  placeholder="mm:ss"
+                  placeholder="e.g. 25m, 1h 30m, 45s"
                   aria-label="Timer duration input"
                 />
               ) : (
@@ -1151,20 +1172,20 @@ export default function ExpandedView({
                           onChange={(e) => setStepperInputVal(e.target.value)}
                           onKeyDown={handleStepperKeyDown}
                           onBlur={handleCommitStepper}
-                          aria-label="Focus duration in minutes"
+                          aria-label="Focus duration"
                         />
                       ) : (
                         <span
                           className={`${styles.stepperValue} ${styles.stepperValueEditable}`}
                           onClick={() => {
-                            const mins = Math.round((durations.FOCUS || 25 * 60 * 1000) / 60000);
-                            handleStartEditStepper('FOCUS', mins);
+                            const currentMs = durations.FOCUS || 25 * 60 * 1000;
+                            handleStartEditStepper('FOCUS', currentMs);
                           }}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
                               e.preventDefault();
-                              const mins = Math.round((durations.FOCUS || 25 * 60 * 1000) / 60000);
-                              handleStartEditStepper('FOCUS', mins);
+                              const currentMs = durations.FOCUS || 25 * 60 * 1000;
+                              handleStartEditStepper('FOCUS', currentMs);
                             }
                           }}
                           tabIndex={0}
@@ -1172,7 +1193,7 @@ export default function ExpandedView({
                           aria-label="Edit focus duration"
                           title="Click to edit focus duration"
                         >
-                          {Math.round((durations.FOCUS || 25 * 60 * 1000) / 60000)}m
+                          {formatDurationLabel(durations.FOCUS || 25 * 60 * 1000)}
                         </span>
                       )}
                       <button
@@ -1222,20 +1243,20 @@ export default function ExpandedView({
                           onChange={(e) => setStepperInputVal(e.target.value)}
                           onKeyDown={handleStepperKeyDown}
                           onBlur={handleCommitStepper}
-                          aria-label="Short break duration in minutes"
+                          aria-label="Short break duration"
                         />
                       ) : (
                         <span
                           className={`${styles.stepperValue} ${styles.stepperValueEditable}`}
                           onClick={() => {
-                            const mins = Math.round((durations.SHORT_BREAK || 5 * 60 * 1000) / 60000);
-                            handleStartEditStepper('SHORT_BREAK', mins);
+                            const currentMs = durations.SHORT_BREAK || 5 * 60 * 1000;
+                            handleStartEditStepper('SHORT_BREAK', currentMs);
                           }}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
                               e.preventDefault();
-                              const mins = Math.round((durations.SHORT_BREAK || 5 * 60 * 1000) / 60000);
-                              handleStartEditStepper('SHORT_BREAK', mins);
+                              const currentMs = durations.SHORT_BREAK || 5 * 60 * 1000;
+                              handleStartEditStepper('SHORT_BREAK', currentMs);
                             }
                           }}
                           tabIndex={0}
@@ -1243,7 +1264,7 @@ export default function ExpandedView({
                           aria-label="Edit short break duration"
                           title="Click to edit short break duration"
                         >
-                          {Math.round((durations.SHORT_BREAK || 5 * 60 * 1000) / 60000)}m
+                          {formatDurationLabel(durations.SHORT_BREAK || 5 * 60 * 1000)}
                         </span>
                       )}
                       <button
@@ -1293,20 +1314,20 @@ export default function ExpandedView({
                           onChange={(e) => setStepperInputVal(e.target.value)}
                           onKeyDown={handleStepperKeyDown}
                           onBlur={handleCommitStepper}
-                          aria-label="Long break duration in minutes"
+                          aria-label="Long break duration"
                         />
                       ) : (
                         <span
                           className={`${styles.stepperValue} ${styles.stepperValueEditable}`}
                           onClick={() => {
-                            const mins = Math.round((durations.LONG_BREAK || 15 * 60 * 1000) / 60000);
-                            handleStartEditStepper('LONG_BREAK', mins);
+                            const currentMs = durations.LONG_BREAK || 15 * 60 * 1000;
+                            handleStartEditStepper('LONG_BREAK', currentMs);
                           }}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') {
                               e.preventDefault();
-                              const mins = Math.round((durations.LONG_BREAK || 15 * 60 * 1000) / 60000);
-                              handleStartEditStepper('LONG_BREAK', mins);
+                              const currentMs = durations.LONG_BREAK || 15 * 60 * 1000;
+                              handleStartEditStepper('LONG_BREAK', currentMs);
                             }
                           }}
                           tabIndex={0}
@@ -1314,7 +1335,7 @@ export default function ExpandedView({
                           aria-label="Edit long break duration"
                           title="Click to edit long break duration"
                         >
-                          {Math.round((durations.LONG_BREAK || 15 * 60 * 1000) / 60000)}m
+                          {formatDurationLabel(durations.LONG_BREAK || 15 * 60 * 1000)}
                         </span>
                       )}
                       <button
@@ -1601,6 +1622,84 @@ export default function ExpandedView({
                     </button>
                   </div>
                 </div>
+
+                {/* Timer Alarm Chimes */}
+                <div className={`${styles.settingsRow} ${styles.settingsRowTwoLine}`}>
+                  <div className={styles.rowLabelGroup}>
+                    <span className={styles.rowLabel}>Timer alarm sounds</span>
+                    <span className={styles.rowSubtitle}>
+                      Calm acoustic chimes to recognize focus and break moments
+                    </span>
+                  </div>
+                  <div className={styles.rowControl}>
+                    <button
+                      type="button"
+                      className={`${styles.toggleSwitch} ${timerSoundEnabled ? styles.toggleOn : ''}`}
+                      onClick={handleTimerSoundToggle}
+                      aria-label="Timer alarm sounds"
+                    >
+                      <div className={styles.toggleThumb} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Alarm Sound Tone / Theme */}
+                {timerSoundEnabled && (
+                  <div className={`${styles.settingsRow} ${styles.settingsRowTwoLine}`}>
+                    <div className={styles.rowLabelGroup}>
+                      <span className={styles.rowLabel}>Alarm tone</span>
+                      <span className={styles.rowSubtitle}>
+                        {ALARM_THEMES[timerSoundTheme]?.desc || 'Meditative Tibetan bowl'}
+                      </span>
+                    </div>
+                    <div className={styles.rowControl}>
+                      <div className={styles.soundToneSelector}>
+                        {Object.entries(ALARM_THEMES).map(([themeKey, themeInfo]) => (
+                          <button
+                            key={themeKey}
+                            type="button"
+                            className={`${styles.soundToneBtn} ${timerSoundTheme === themeKey ? styles.soundToneBtnActive : ''}`}
+                            onClick={() => handleTimerThemeChange(themeKey)}
+                            title={themeInfo.desc}
+                          >
+                            {themeInfo.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Alarm Preview Moments */}
+                {timerSoundEnabled && (
+                  <div className={styles.settingsRow}>
+                    <span className={styles.rowLabel}>Preview moments</span>
+                    <div className={styles.rowControl} style={{ gap: 6 }}>
+                      <button
+                        type="button"
+                        className={styles.alarmPreviewBtn}
+                        onClick={() => handlePreviewAlarm('FOCUS')}
+                        title="Preview sound played when focus ends (time to unwind)"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                          <polygon points="5 3 19 12 5 21 5 3" />
+                        </svg>
+                        Break (Unwind)
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.alarmPreviewBtn}
+                        onClick={() => handlePreviewAlarm('SHORT_BREAK')}
+                        title="Preview sound played when break ends (time to focus)"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                          <polygon points="5 3 19 12 5 21 5 3" />
+                        </svg>
+                        Focus (Awaken)
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Include in Screen Recordings */}
                 <div className={`${styles.settingsRow} ${styles.settingsRowTwoLine}`}>

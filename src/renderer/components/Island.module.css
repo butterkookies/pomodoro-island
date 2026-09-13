@@ -8,6 +8,7 @@
   flex-direction: column;
   margin-top: 0;
   box-sizing: border-box;
+  transform-origin: top center;
   transition: box-shadow 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
   user-select: none;
   touch-action: none;
@@ -19,62 +20,92 @@
 
 .islandMediaActive {
   box-shadow:
-    /* Layer 1: Structural Depth Occlusion (Pitch-Black Grounding) */
-    0 20px 48px -8px rgba(0, 0, 0, 0.92),
-    0 8px 18px rgba(0, 0, 0, 0.22),
-    /* Layer 2: Audio-Reactive Radiant Bounce */
-    0 calc(28px + var(--audio-pulse, 0) * 16px)
-      calc(54px + var(--audio-pulse, 0) * 32px)
-      calc(-6px + var(--audio-pulse, 0) * 6px)
-      rgba(var(--media-dominant-rgb, 92, 119, 189), calc(0.18 + var(--audio-pulse, 0) * 0.14));
+    /* Layer 1: Downward subtle specular edge (no upward bleed onto monitor bezel) */
+    0 2px 4px rgba(255, 255, 255, 0.08),
+    /* Layer 2: Deep physical depth grounding */
+    0 18px 44px -8px rgba(0, 0, 0, 0.90),
+    0 6px 16px rgba(0, 0, 0, 0.35),
+    /* Layer 3: Audio-reactive primary moving color shadow (drifts horizontally with music) */
+    calc(var(--audio-shift-x, 0px))
+      calc(22px + var(--audio-pulse, 0) * 16px)
+      calc(40px + var(--audio-pulse, 0) * 28px)
+      calc(-4px + var(--audio-pulse, 0) * 4px)
+      rgba(var(--media-dominant-rgb, 92, 119, 189), calc(0.20 + var(--audio-pulse, 0) * 0.18)),
+    /* Layer 4: Counter-balancing ambient light shadow (creates dynamic 3D light motion) */
+    calc(-0.55 * var(--audio-shift-x, 0px))
+      calc(10px + var(--audio-pulse, 0) * 8px)
+      calc(24px + var(--audio-pulse, 0) * 14px)
+      rgba(255, 255, 255, calc(0.04 + var(--audio-pulse, 0) * 0.05)),
+    /* Layer 5: Subtle diffused ambient backlight wash */
+    0
+      calc(8px + var(--audio-pulse, 0) * 10px)
+      calc(30px + var(--audio-pulse, 0) * 20px)
+      rgba(var(--media-dominant-rgb, 92, 119, 189), calc(0.12 + var(--audio-pulse, 0) * 0.10));
   transition: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .islandMediaActive {
     --audio-pulse: 0.5 !important;
+    --audio-shift-x: 0px !important;
     transition: none;
   }
 }
 
-/* Luminous magnetic alignment tick when island snaps to screen center */
+/* Luminous magnetic alignment tick when island snaps to screen center (anchored to bottom edge, zero top bezel line) */
 .magneticGuideTick {
   position: absolute;
-  top: 0;
+  bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 24px;
-  height: 2.5px;
-  border-radius: 0 0 2px 2px;
-  background: #5c77bd;
-  box-shadow: 0 1px 8px rgba(92, 119, 189, 0.85), 0 0 14px rgba(92, 119, 189, 0.55);
+  width: 20px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--accent-bar, #5c77bd);
+  box-shadow: 0 -1px 8px var(--accent-bar-glow, rgba(92, 119, 189, 0.85));
   pointer-events: none;
   z-index: 10;
 }
 
-/* Concave ears flaring out into top monitor bezel */
+/* Concave ears flaring out into top monitor bezel — permanently anchored without right/bottom layout projection bugs */
 .notchEarLeft {
   position: absolute;
   top: 0;
-  left: -14px;
+  left: 0;
+  transform: translateX(-100%);
+  margin-left: 1px;
   pointer-events: none;
   z-index: 6;
-  opacity: var(--island-opacity, 0.95);
-  transition: opacity 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: visible;
+  display: block;
 }
 
 .notchEarRight {
   position: absolute;
   top: 0;
-  right: -14px;
+  left: 100%;
+  transform: translateX(-1px);
   pointer-events: none;
   z-index: 6;
-  opacity: var(--island-opacity, 0.95);
-  transition: opacity 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: visible;
+  display: block;
 }
 
 .earFill {
-  fill: #000000;
+  fill: var(--island-bg, #000000);
+}
+
+/* Seamless border frame — starts at ear height (14px) so no vertical cut seam exists between ears and island body */
+.islandBorderFrame {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-top: none;
+  pointer-events: none;
+  z-index: 5;
+  box-sizing: border-box;
 }
 
 /* Inner content clipped to bottom rounded corners */
@@ -224,30 +255,30 @@
 
 .idleEqBar:nth-child(1) {
   height: 3px;
-  animation: idleEqBounce1 0.75s ease-in-out infinite alternate;
+  animation: idleEqBounce1 0.22s cubic-bezier(0.2, 0.9, 0.3, 1) infinite alternate;
 }
 
 .idleEqBar:nth-child(2) {
-  height: 10px;
-  animation: idleEqBounce2 0.55s ease-in-out infinite alternate;
+  height: 5px;
+  animation: idleEqBounce2 0.17s cubic-bezier(0.2, 0.9, 0.3, 1) infinite alternate;
 }
 
 .idleEqBar:nth-child(3) {
-  height: 5px;
-  animation: idleEqBounce3 0.85s ease-in-out infinite alternate;
+  height: 3.5px;
+  animation: idleEqBounce3 0.25s cubic-bezier(0.2, 0.9, 0.3, 1) infinite alternate;
 }
 
 @keyframes idleEqBounce1 {
-  0% { height: 3px; }
-  100% { height: 11px; }
+  0% { height: 2.5px; }
+  100% { height: 7.5px; }
 }
 
 @keyframes idleEqBounce2 {
-  0% { height: 11px; }
-  100% { height: 3px; }
+  0% { height: 3px; }
+  100% { height: 8.5px; }
 }
 
 @keyframes idleEqBounce3 {
-  0% { height: 4px; }
-  100% { height: 9px; }
+  0% { height: 2px; }
+  100% { height: 6.5px; }
 }

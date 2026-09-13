@@ -14,6 +14,7 @@ import { playReminder, getWellnessPrompt } from './utils/soundManager';
 import { getCurrentSound, play as ambientPlay, stop as ambientStop } from './utils/ambientPlayer';
 import { notifyPhaseComplete, notifyReminder } from './utils/notificationManager';
 import { extractDominantColor, DEFAULT_RGB } from './utils/colorExtractor';
+import { initSystemAudio } from './utils/systemAudioListener';
 import DevFeedbackOverlay from './components/DevFeedback/DevFeedbackOverlay';
 import styles from './App.module.css';
 
@@ -43,7 +44,7 @@ export default function App() {
     return !hasCompleted;
   });
 
-  const timer = useTimer(handlePhaseComplete);
+  const timer = useTimer(handlePhaseComplete, pomodoro.state);
   const island = useIslandState({ preventIdle: isFeedbackActive, isOnboarding });
   const { timers: customTimers, addTimer, removeTimer } = useCustomTimers();
 
@@ -181,16 +182,22 @@ export default function App() {
     });
   }, [pomodoro.config.label, timer.timeDisplay, tasks.activeTask]);
 
-  // ── Media artwork dominant color extraction ────────────────
+  // ── Media artwork dominant color extraction & loopback capture ─────
   useEffect(() => {
     let isMounted = true;
 
-    if (nowPlaying?.isPlaying && nowPlaying?.artwork) {
-      extractDominantColor(nowPlaying.artwork).then((rgb) => {
-        if (isMounted) {
-          document.documentElement.style.setProperty('--media-dominant-rgb', rgb);
-        }
-      });
+    if (nowPlaying?.isPlaying) {
+      initSystemAudio()?.catch?.(() => {});
+
+      if (nowPlaying?.artwork) {
+        extractDominantColor(nowPlaying.artwork).then((rgb) => {
+          if (isMounted) {
+            document.documentElement.style.setProperty('--media-dominant-rgb', rgb);
+          }
+        });
+      } else {
+        document.documentElement.style.setProperty('--media-dominant-rgb', DEFAULT_RGB);
+      }
     } else {
       document.documentElement.style.setProperty('--media-dominant-rgb', DEFAULT_RGB);
     }

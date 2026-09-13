@@ -1,4 +1,4 @@
-const { app, BrowserWindow, globalShortcut, ipcMain, Notification, screen, Menu, Tray, nativeImage } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain, Notification, screen, Menu, Tray, nativeImage, desktopCapturer, session, clipboard } = require('electron');
 const path = require('node:path');
 const { exec } = require('node:child_process');
 const Store = require('electron-store');
@@ -37,6 +37,7 @@ let isNotchVisible = true;
 let isModalOpen = false;   // when a dev feedback popover, drawer, or modal is open
 let currentStatus = { text: 'Focus', time: '25:00' };
 let islandBounds = null;  // { left, top, right, bottom } in window-relative CSS px, from renderer
+let devDockBounds = null; // { left, top, right, bottom } in window-relative CSS px, for dev feedback dock
 let hoverDwellTimer = null; // Intent buffer timer for anti-swipe dwell delay
 let includeInRecordings = store.get('includeInRecordings', true);
 let includeInScreenshots = store.get('includeInScreenshots', true);
@@ -278,17 +279,31 @@ app.whenReady().then(() => {
         relY <= (isIdle ? 32 : 52);
     }
 
+    // Check if cursor is over the dev feedback dock
+    let inDockZone = false;
+    if (devDockBounds) {
+      inDockZone =
+        relX >= devDockBounds.left &&
+        relX <= devDockBounds.right &&
+        relY >= devDockBounds.top &&
+        relY <= devDockBounds.bottom;
+    }
+
+    const inInteractiveZone = inIslandZone || inDockZone;
+
     if (isIdle) {
-      if (inIslandZone) {
-        // Cursor entered hover zone: initiate dwell delay buffer (180ms)
+      if (inInteractiveZone) {
+        // Cursor entered hover zone: initiate dwell delay buffer (or 0ms if over dock)
         if (!isOverIsland && !hoverDwellTimer) {
           hoverDwellTimer = setTimeout(() => {
             hoverDwellTimer = null;
             if (!win || win.isDestroyed()) return;
             isOverIsland = true;
             win.setIgnoreMouseEvents(false);
-            win.webContents.send('cursor-enter-island');
-          }, 180);
+            if (inIslandZone) {
+              win.webContents.send('cursor-enter-island');
+            }
+          }, inDockZone ? 0 : 180);
         }
       } else {
         // Cursor left hover zone: cancel any pending dwell timer
@@ -304,11 +319,11 @@ app.whenReady().then(() => {
       return;
     }
 
-    // Non-idle: precise island-element hit-test
-    if (inIslandZone && !isOverIsland) {
+    // Non-idle: precise interactive zone hit-test
+    if (inInteractiveZone && !isOverIsland) {
       isOverIsland = true;
       win.setIgnoreMouseEvents(false);
-    } else if (!inIslandZone && isOverIsland) {
+    } else if (!inInteractiveZone && isOverIsland) {
       isOverIsland = false;
       // { forward: true } keeps mousemove flowing to the renderer so the
       // leave-to-idle timer still works, but clicks fall through to the browser.
@@ -421,6 +436,20 @@ app.whenReady().then(() => {
 
   ipcMain.on('update-island-bounds', (_event, bounds) => {
     islandBounds = bounds;
+  });
+
+  ipcMain.on('update-dev-dock-bounds', (_event, bounds) => {
+    devDockBounds = bounds;
+  });
+
+  ipcMain.on('write-clipboard', (_event, text) => {
+    if (typeof text === 'string') {
+      clipboard.writeText(text);
+    }
+  });
+
+  ipcMain.handle('read-clipboard', () => {
+    return clipboard.readText();
   });
 
   ipcMain.on('set-capture-visibility', (_event, { type, value }) => {
@@ -665,6 +694,35 @@ Write-Output '{}'
   pollMedia();
 
   ipcMain.handle('get-now-playing', () => lastMediaState);
+
+  ipcMain.handle('get-desktop-sources', async () => {
+    try {
+      const sources = await desktopCapturer.getSources({ types: ['screen'] });
+      return sources.map((s) => ({ id: s.id, name: s.name }));
+    } catch (err) {
+      console.error('[Main] get-desktop-sources error:', err);
+      return [];
+    }
+  });
+
+  // Automatically approve desktop loopback audio request without user dialog
+  try {
+    if (session.defaultSession) {
+      session.defaultSession.setDisplayMediaRequestHandler((_request, callback) => {
+        desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
+          if (sources && sources.length > 0) {
+            callback({ video: sources[0], audio: 'loopback' });
+          } else {
+            callback({});
+          }
+        }).catch(() => {
+          callback({});
+        });
+      });
+    }
+  } catch (err) {
+    console.error('[Main] setDisplayMediaRequestHandler setup error:', err);
+  }
 
   ipcMain.on('media-control', (_event, action) => {
     sendMediaKey(action);

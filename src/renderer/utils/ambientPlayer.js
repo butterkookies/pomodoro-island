@@ -1,5 +1,6 @@
 let _ctx = null;
 let _masterGain = null;
+let _analyser = null;
 let _source = null;
 let _currentSound = null;
 let _volume = window.electronAPI?.store?.get('ambientVolume') ?? 0.5;
@@ -10,7 +11,11 @@ function ctx() {
     _masterGain = _ctx.createGain();
     // Psychoacoustic logarithmic curve
     _masterGain.gain.value = _volume * _volume;
-    _masterGain.connect(_ctx.destination);
+    _analyser = _ctx.createAnalyser();
+    _analyser.fftSize = 64;
+    _analyser.smoothingTimeConstant = 0.65;
+    _masterGain.connect(_analyser);
+    _analyser.connect(_ctx.destination);
   }
   if (_ctx.state === 'suspended') _ctx.resume();
   return _ctx;
@@ -138,3 +143,50 @@ export function setVolume(v) {
 
 export function getCurrentSound() { return _currentSound; }
 export function getVolume() { return _volume; }
+export function isPlaying() { return Boolean(_currentSound); }
+
+/**
+ * Returns 8 normalized frequency levels [1..7] sampled from the active soundscape.
+ * Returns null if no soundscape is currently playing.
+ *
+ * @returns {number[] | null} Array of 8 segment levels (1 to 7) or null
+ */
+export function getFrequencyLevels() {
+  if (!_currentSound || !_analyser) return null;
+  const binCount = _analyser.frequencyBinCount; // 32 bins for fftSize 64
+  const data = new Uint8Array(binCount);
+  _analyser.getByteFrequencyData(data);
+
+  // Group 32 bins into 8 frequency bands:
+  // Band 0 (63Hz): bins 0..1
+  // Band 1 (160Hz): bins 2..3
+  // Band 2 (400Hz): bins 4..5
+  // Band 3 (1kHz): bins 6..8
+  // Band 4 (2.5kHz): bins 9..12
+  // Band 5 (6.3kHz): bins 13..17
+  // Band 6 (10kHz): bins 18..23
+  // Band 7 (16kHz): bins 24..31
+  const bandRanges = [
+    [0, 1],
+    [2, 3],
+    [4, 5],
+    [6, 8],
+    [9, 12],
+    [13, 17],
+    [18, 23],
+    [24, 31],
+  ];
+
+  const levels = bandRanges.map(([start, end]) => {
+    let sum = 0;
+    const count = end - start + 1;
+    for (let b = start; b <= end; b++) {
+      sum += data[b] || 0;
+    }
+    const avg = sum / count; // 0 to 255
+    const normalized = Math.min(1, Math.max(0, avg / 180));
+    return Math.max(1, Math.min(7, Math.round(normalized * 7)));
+  });
+
+  return levels;
+}

@@ -34,6 +34,8 @@ export default function DevFeedbackOverlay({
   const [islandRect, setIslandRect] = useState({ left: 0, top: 0, width: 0, height: 0 });
 
   const textareaRef = useRef(null);
+  const dockRef = useRef(null);
+  const minBtnRef = useRef(null);
 
   // Continuously track island DOM rectangle
   useEffect(() => {
@@ -61,6 +63,47 @@ export default function DevFeedbackOverlay({
     };
   }, [islandRef, islandState]);
 
+  // Inform main process of dev dock exact screen bounds for mouse event pass-through hit-testing
+  useEffect(() => {
+    if (!isDevMode) {
+      window.electronAPI?.updateDevDockBounds?.(null);
+      return;
+    }
+
+    function sendBounds() {
+      const el = !isDockDismissed ? dockRef.current : minBtnRef.current;
+      if (!el) {
+        window.electronAPI?.updateDevDockBounds?.(null);
+        return;
+      }
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) {
+        window.electronAPI?.updateDevDockBounds?.({
+          left: Math.floor(r.left) - 6,
+          top: Math.floor(r.top) - 6,
+          right: Math.ceil(r.right) + 6,
+          bottom: Math.ceil(r.bottom) + 6,
+        });
+      } else {
+        window.electronAPI?.updateDevDockBounds?.(null);
+      }
+    }
+
+    sendBounds();
+    const rafId = requestAnimationFrame(sendBounds);
+    const timer1 = setTimeout(sendBounds, 60);
+    const timer2 = setTimeout(sendBounds, 200);
+
+    window.addEventListener('resize', sendBounds);
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      window.removeEventListener('resize', sendBounds);
+      window.electronAPI?.updateDevDockBounds?.(null);
+    };
+  }, [isDevMode, isDockDismissed, pins.length, copySuccess, isDroppingPin]);
+
   // Notify parent and Electron main process whether modal/dev interaction is active
   const isInteracting = Boolean(draftPin || editingPin || isDrawerOpen || isDroppingPin);
   useEffect(() => {
@@ -78,7 +121,37 @@ export default function DevFeedbackOverlay({
     }
   }, [draftPin, editingPin]);
 
-  // Keyboard shortcuts: Alt+D / Ctrl+Shift+D toggles dev mode; Esc closes popovers
+  // Direct quick-add comment handler (centered in modal, pre-tagged with active context)
+  const handleOpenNewComment = useCallback(() => {
+    setIsDroppingPin(false);
+    setEditingPin(null);
+    setCommentText('');
+
+    let targetLabel = 'Dynamic Island';
+    let category = 'GENERAL';
+    if (islandState === 'idle') {
+      targetLabel = 'Idle Pill';
+      category = 'IDLE';
+    } else if (islandState === 'compact') {
+      targetLabel = 'Compact View';
+      category = 'COMPACT';
+    } else if (islandState === 'expanded') {
+      targetLabel = `Expanded View (${activeTab ? activeTab.toUpperCase() : 'TIMER'})`;
+      category = (activeTab || 'EXPANDED').toUpperCase();
+    }
+
+    setDraftPin({
+      xPercent: 50,
+      yPercent: 50,
+      targetLabel,
+      category,
+      domPath: 'island-container',
+      viewState: islandState,
+      activeTab: islandState === 'expanded' ? activeTab : null,
+    });
+  }, [islandState, activeTab]);
+
+  // Keyboard shortcuts: Alt+D toggles dev mode; Alt+C opens comment; Esc closes popovers
   useEffect(() => {
     function handleKeyDown(e) {
       if ((e.altKey && (e.key === 'd' || e.key === 'D')) ||
@@ -91,6 +164,14 @@ export default function DevFeedbackOverlay({
           setTimeout(() => setToastText(''), 2000);
           return next;
         });
+        return;
+      }
+
+      if (isDevMode && !draftPin && !editingPin && !isDrawerOpen &&
+          ((e.altKey && (e.key === 'c' || e.key === 'C')) ||
+           (e.ctrlKey && e.shiftKey && (e.key === 'c' || e.key === 'C')))) {
+        e.preventDefault();
+        handleOpenNewComment();
         return;
       }
 
@@ -111,7 +192,7 @@ export default function DevFeedbackOverlay({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [draftPin, editingPin, isDrawerOpen, isDroppingPin]);
+  }, [draftPin, editingPin, isDrawerOpen, isDroppingPin, isDevMode, handleOpenNewComment]);
 
   // Click listener for explicit "Drop Pin" mode
   useEffect(() => {
@@ -309,24 +390,63 @@ export default function DevFeedbackOverlay({
   // Copy all pins formatted as an AI prompt to clipboard
   const handleCopyPrompt = useCallback(async () => {
     if (pins.length === 0) {
-      setToastText('No pins to copy! Right-click to drop a pin.');
-      setTimeout(() => setToastText(''), 2200);
+      setToastText('No feedback items to copy! Click "Add Comment" first.');
+      setTimeout(() => setToastText(''), 2500);
       return;
     }
 
     const promptText = formatPinsToPrompt(pins);
+    let copied = false;
+
+    // 1. Try Electron native clipboard first (bypasses window focus/permission restrictions)
     try {
-      await navigator.clipboard.writeText(promptText);
+      if (window.electronAPI?.writeClipboard) {
+        window.electronAPI.writeClipboard(promptText);
+        copied = true;
+      }
+    } catch (err) {
+      console.warn('[DevFeedback] Native clipboard write failed, trying fallback:', err);
+    }
+
+    // 2. Try modern navigator.clipboard
+    if (!copied && navigator?.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(promptText);
+        copied = true;
+      } catch (err) {
+        console.warn('[DevFeedback] navigator.clipboard write failed:', err);
+      }
+    }
+
+    // 3. Fallback to document.execCommand('copy')
+    if (!copied) {
+      try {
+        const tempTextArea = document.createElement('textarea');
+        tempTextArea.value = promptText;
+        tempTextArea.style.position = 'fixed';
+        tempTextArea.style.left = '-9999px';
+        tempTextArea.style.top = '-9999px';
+        tempTextArea.style.opacity = '0';
+        document.body.appendChild(tempTextArea);
+        tempTextArea.focus();
+        tempTextArea.select();
+        copied = document.execCommand('copy');
+        document.body.removeChild(tempTextArea);
+      } catch (err) {
+        console.error('[DevFeedback] All clipboard methods failed:', err);
+      }
+    }
+
+    if (copied) {
       setCopySuccess(true);
-      setToastText(`Copied prompt (${pins.length} pins) to clipboard!`);
+      setToastText(`Copied prompt (${pins.length} feedback item${pins.length > 1 ? 's' : ''})!`);
       setTimeout(() => {
         setCopySuccess(false);
         setToastText('');
       }, 2500);
-    } catch (err) {
-      console.error('Clipboard copy failed:', err);
+    } else {
       setToastText('Failed to copy to clipboard');
-      setTimeout(() => setToastText(''), 2000);
+      setTimeout(() => setToastText(''), 2200);
     }
   }, [pins]);
 
@@ -342,33 +462,6 @@ export default function DevFeedbackOverlay({
   const nextDraftNumber = pins.length > 0
     ? Math.max(...pins.map(p => p.number || 0)) + 1
     : 1;
-
-  // Smart popover position based on target pin
-  const activePinForPopover = draftPin || editingPin;
-  let popoverStyle = {};
-  if (activePinForPopover && islandRect.width > 0) {
-    const pinPxX = islandRect.left + (activePinForPopover.xPercent / 100) * islandRect.width;
-    const pinPxY = islandRect.top + (activePinForPopover.yPercent / 100) * islandRect.height;
-    const popWidth = 320;
-    const popHeight = 175;
-    const clampedX = Math.max(12, Math.min(window.innerWidth - popWidth - 12, pinPxX - popWidth / 2));
-    let clampedY = pinPxY + 16;
-    if (clampedY + popHeight > window.innerHeight - 12) {
-      clampedY = Math.max(8, pinPxY - popHeight - 16);
-    }
-    popoverStyle = {
-      position: 'absolute',
-      left: `${clampedX}px`,
-      top: `${clampedY}px`,
-    };
-  }
-
-  // Floating dock position
-  const dockStyle = {
-    position: 'absolute',
-    top: `${islandRect.top + islandRect.height + 6}px`,
-    left: `${Math.max(12, islandRect.left + islandRect.width - 230)}px`,
-  };
 
   return (
     <div className={styles.overlayContainer}>
@@ -466,7 +559,7 @@ export default function DevFeedbackOverlay({
         </div>
       )}
 
-      {/* ── New / Edit Pin Popover Modal ────────────────────── */}
+      {/* ── Centered Comment Modal (Fixed in one place) ─────── */}
       {(draftPin || editingPin) && (
         <div
           className={styles.popoverBackdrop}
@@ -478,7 +571,6 @@ export default function DevFeedbackOverlay({
         >
           <div
             className={styles.popoverCard}
-            style={popoverStyle}
             onClick={(e) => e.stopPropagation()}
           >
             <div className={styles.popoverHeader}>
@@ -488,6 +580,9 @@ export default function DevFeedbackOverlay({
                 </span>
                 <span className={styles.targetChip} title={draftPin ? draftPin.targetLabel : editingPin.targetLabel}>
                   {draftPin ? draftPin.targetLabel : editingPin.targetLabel}
+                </span>
+                <span className={styles.viewBadge}>
+                  {(draftPin ? draftPin.viewState : editingPin.viewState).toUpperCase()}
                 </span>
               </div>
               <button
@@ -528,7 +623,7 @@ export default function DevFeedbackOverlay({
                     className={styles.deleteBtn}
                     onClick={() => handleDeletePin(editingPin.id)}
                   >
-                    Delete Pin
+                    Delete
                   </button>
                 )}
               </div>
@@ -550,7 +645,7 @@ export default function DevFeedbackOverlay({
                   onClick={draftPin ? handleSaveDraft : handleUpdatePin}
                   disabled={!commentText.trim()}
                 >
-                  {draftPin ? 'Save Pin' : 'Update'}
+                  {draftPin ? 'Save Comment' : 'Update'}
                 </button>
               </div>
             </div>
@@ -558,20 +653,29 @@ export default function DevFeedbackOverlay({
         </div>
       )}
 
-      {/* ── Floating Dev Dock / Toolbar ─────────────────────── */}
-      {isDevMode && !isDockDismissed && islandRect.width > 0 && (
+      {/* ── Centered Dev Dock / Toolbar (Fixed bottom center) ── */}
+      {isDevMode && !isDockDismissed && (
         <div
+          ref={dockRef}
           className={styles.devDock}
-          style={dockStyle}
         >
           <button
             type="button"
             className={styles.dockBadgeBtn}
             onClick={() => setIsDrawerOpen(true)}
-            title={`View all ${pins.length} feedback pins (${visiblePins.length} on this view)`}
+            title={`View all ${pins.length} feedback items (${visiblePins.length} on this view)`}
           >
             <span>Pins</span>
             <span className={styles.dockBadgePill}>{pins.length}</span>
+          </button>
+
+          <button
+            type="button"
+            className={`${styles.dockActionBtn} ${styles.dockActionBtnPrimary}`}
+            onClick={handleOpenNewComment}
+            title="Add feedback comment for current view (Alt+C)"
+          >
+            💬 Add Comment
           </button>
 
           <button
@@ -582,18 +686,18 @@ export default function DevFeedbackOverlay({
               setToastText(!isDroppingPin ? 'Click anywhere on the island to drop a pin' : '');
               if (!isDroppingPin) setTimeout(() => setToastText(''), 3000);
             }}
-            title="Click to drop a new feedback pin on the island (or right-click anytime)"
+            title="Click to pinpoint specific UI component on the island (or right-click anytime)"
           >
-            {isDroppingPin ? '✕ Cancel' : '＋ Drop Pin'}
+            {isDroppingPin ? '✕ Cancel' : '📍 Drop Pin'}
           </button>
 
           <button
             type="button"
             className={`${styles.dockActionBtn} ${copySuccess ? styles.dockActionBtnSuccess : ''}`}
             onClick={handleCopyPrompt}
-            title="Copy all pins formatted as an AI prompt for coding"
+            title="Copy all feedback formatted as an AI prompt to clipboard"
           >
-            {copySuccess ? '✓ Copied' : '📋 Copy Prompt'}
+            {copySuccess ? '✓ Copied!' : '📋 Copy Prompt'}
           </button>
 
           <button
@@ -610,28 +714,24 @@ export default function DevFeedbackOverlay({
             type="button"
             className={styles.dockIconBtn}
             onClick={() => setIsDockDismissed(true)}
-            title="Dismiss dev dock (press Alt+D to reopen)"
-            aria-label="Dismiss dev dock"
+            title="Minimize dev dock (Alt+D to toggle)"
+            aria-label="Minimize dev dock"
           >
             ✕
           </button>
         </div>
       )}
 
-      {/* ── Minimized Pin Indicator (When dock dismissed but pins exist) ── */}
-      {isDevMode && isDockDismissed && pins.length > 0 && islandRect.width > 0 && (
+      {/* ── Centered Minimized Pin Indicator (When dock dismissed) ── */}
+      {isDevMode && isDockDismissed && (
         <button
+          ref={minBtnRef}
           type="button"
           className={styles.dockMinimizedBtn}
-          style={{
-            position: 'absolute',
-            top: `${islandRect.top + islandRect.height + 6}px`,
-            left: `${Math.max(12, islandRect.left + islandRect.width - 55)}px`,
-          }}
           onClick={() => setIsDockDismissed(false)}
-          title="Reopen Dev Dock (Alt+D)"
+          title="Reopen Dev Feedback Dock (Alt+D)"
         >
-          📍 {pins.length}
+          💬 Feedback {pins.length > 0 ? `(${pins.length})` : ''}
         </button>
       )}
 
@@ -659,18 +759,32 @@ export default function DevFeedbackOverlay({
               </button>
             </div>
 
-            <button
-              type="button"
-              className={styles.drawerAddBtn}
-              onClick={() => {
-                setIsDrawerOpen(false);
-                setIsDroppingPin(true);
-                setToastText('Click anywhere on the island to drop a pin');
-                setTimeout(() => setToastText(''), 3000);
-              }}
-            >
-              ＋ Drop New Feedback Pin
-            </button>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <button
+                type="button"
+                className={styles.drawerAddBtn}
+                style={{ margin: 0, flex: 1 }}
+                onClick={() => {
+                  setIsDrawerOpen(false);
+                  handleOpenNewComment();
+                }}
+              >
+                💬 Add Comment
+              </button>
+              <button
+                type="button"
+                className={styles.drawerAddBtn}
+                style={{ margin: 0, flex: 1 }}
+                onClick={() => {
+                  setIsDrawerOpen(false);
+                  setIsDroppingPin(true);
+                  setToastText('Click anywhere on the island to drop a pin');
+                  setTimeout(() => setToastText(''), 3000);
+                }}
+              >
+                📍 Drop Pin
+              </button>
+            </div>
 
             <div className={styles.drawerList}>
               {pins.length === 0 ? (
@@ -738,7 +852,7 @@ export default function DevFeedbackOverlay({
                 onClick={handleCopyPrompt}
                 disabled={pins.length === 0}
               >
-                📋 Copy All as Prompt
+                {copySuccess ? '✓ Copied!' : '📋 Copy All as Prompt'}
               </button>
             </div>
           </div>
