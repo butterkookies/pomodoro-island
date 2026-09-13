@@ -70,6 +70,7 @@ body {
   --accent-bar-hover: #6d88ce;
   --accent-bar-light: #d0d9ee;
   --accent-bar-gradient: linear-gradient(135deg, #485c8e 0%, #768ebd 100%);
+  --accent-bar-gradient-h: linear-gradient(90deg, #3a4369 0%, #556391 25%, #7b8cb8 55%, #d0d9ee 100%);
   --accent-bar-glow: rgba(92, 119, 189, 0.35);
 
   /* Typography Colors */

@@ -188,17 +188,11 @@
       rgba(255, 255, 255, 0.12) 30%,
       rgba(0, 0, 0, 0.18) 100%
     ),
-    linear-gradient(
-      90deg,
-      #485c8e 0%,
-      #5b72a8 30%,
-      #768ebd 65%,
-      #9ab2de 100%
-    );
+    var(--accent-bar-gradient-h, var(--accent-bar-gradient));
   box-shadow:
     inset 0 1px 1px rgba(255, 255, 255, 0.60),
     inset 0 -1px 1px rgba(0, 0, 0, 0.35),
-    0 0 6px rgba(118, 142, 189, 0.30);
+    0 0 6px var(--accent-bar-glow, rgba(92, 119, 189, 0.30));
   transition: width 150ms linear;
 }
 

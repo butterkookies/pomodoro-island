@@ -27,6 +27,7 @@ describe('useAccentTheme helpers', () => {
     assert.equal(mockStyle['--accent-bar-hover'], theme.hover);
     assert.equal(mockStyle['--accent-bar-light'], theme.light);
     assert.equal(mockStyle['--accent-bar-gradient'], theme.gradient);
+    assert.equal(mockStyle['--accent-bar-gradient-h'], theme.swatchGradient);
     assert.equal(mockStyle['--accent-bar-glow'], theme.glow);
   });
 });

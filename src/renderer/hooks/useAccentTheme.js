@@ -14,6 +14,7 @@ export function applyThemeTokensToElement(element, theme) {
   element.style.setProperty('--accent-bar-hover', theme.hover);
   element.style.setProperty('--accent-bar-light', theme.light);
   element.style.setProperty('--accent-bar-gradient', theme.gradient);
+  element.style.setProperty('--accent-bar-gradient-h', theme.swatchGradient);
   element.style.setProperty('--accent-bar-glow', theme.glow);
 }
 

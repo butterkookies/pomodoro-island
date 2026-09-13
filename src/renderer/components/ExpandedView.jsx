@@ -755,6 +755,19 @@ export default function ExpandedView({
                   <span className={styles.sessionCountText}>• Session {(sessionCount % 4) + 1} of 4</span>
                 )}
               </div>
+
+              {/* Satin Frosted Time Progress Bar in Expanded View */}
+              {!isOvertime && (
+                <div
+                  className={styles.expandedProgressTrack}
+                  title={`Remaining: ${Math.round(Math.max(0, Math.min(1, percent ?? 1)) * 100)}%`}
+                >
+                  <div
+                    className={styles.expandedProgressFill}
+                    style={{ width: `${Math.max(0, Math.min(1, percent ?? 1)) * 100}%` }}
+                  />
+                </div>
+              )}
               {isOvertime && (
                 <button
                   type="button"

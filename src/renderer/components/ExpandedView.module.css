@@ -226,6 +226,37 @@
   color: var(--text-tertiary);
 }
 
+/* ── Expanded View Hero Time Progress Bar ────────────────── */
+.expandedProgressTrack {
+  width: 140px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+  position: relative;
+  overflow: hidden;
+  margin-top: 5px;
+  margin-bottom: 2px;
+}
+
+.expandedProgressFill {
+  height: 100%;
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.35) 0%,
+      rgba(255, 255, 255, 0.10) 50%,
+      rgba(0, 0, 0, 0.15) 100%
+    ),
+    var(--accent-bar-gradient-h, var(--accent-bar-gradient));
+  box-shadow:
+    inset 0 0.5px 1px rgba(255, 255, 255, 0.6),
+    0 0 6px var(--accent-bar-glow, rgba(92, 119, 189, 0.35));
+  transition: width 150ms linear;
+}
+
 /* Transport Controls */
 .transportRow {
   display: flex;
