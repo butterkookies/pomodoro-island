@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import StatsTab from './StatsTab';
+import VfdEqualizer from './VfdEqualizer';
+import SkeuoVolumeFader from './SkeuoVolumeFader';
 import styles from './ExpandedView.module.css';
 import {
   SOUND_LIST,
@@ -93,6 +95,7 @@ export default function ExpandedView({
   onResetNotchSettings,
   horizontalOffset = 0,
   onResetPosition,
+  onReplayOnboarding,
 }) {
   const [newNoteText, setNewNoteText] = useState('');
   const [customTimerName, setCustomTimerName] = useState('');
@@ -232,6 +235,22 @@ export default function ExpandedView({
   // Audio state
   const [currentSound, setCurrentSound] = useState(() => getCurrentSound());
   const [volume, setVolumeState] = useState(() => getVolume());
+  const [mediaVolume, setMediaVolumeState] = useState(0.70);
+
+  useEffect(() => {
+    window.electronAPI?.getMediaVolume?.().then((vol) => {
+      if (typeof vol === 'number') setMediaVolumeState(vol);
+    });
+    const unsubscribe = window.electronAPI?.onMediaVolumeUpdate?.((vol) => {
+      if (typeof vol === 'number') setMediaVolumeState(vol);
+    });
+    return () => unsubscribe?.();
+  }, []);
+
+  const handleMediaVolumeChange = useCallback((vol) => {
+    setMediaVolumeState(vol);
+    window.electronAPI?.setMediaVolume?.(vol);
+  }, []);
 
   // Settings: Displays, UI sounds, Startup & Top Margin
   const [displays, setDisplays] = useState([]);
@@ -826,7 +845,8 @@ export default function ExpandedView({
             {/* Live Now Playing Track (Spotify / System Audio) */}
             {nowPlaying?.isPlaying && nowPlaying?.title && (
               <div className={styles.nowPlayingCard}>
-                <div className={styles.nowPlayingTrackInfo}>
+                {/* Column 1: Artwork */}
+                <div className={styles.nowPlayingArtCol}>
                   {nowPlaying.artwork ? (
                     <img
                       src={nowPlaying.artwork}
@@ -835,74 +855,88 @@ export default function ExpandedView({
                     />
                   ) : (
                     <div className={styles.nowPlayingThumbPlaceholder}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <circle cx="12" cy="12" r="10" />
                         <circle cx="12" cy="12" r="3" />
                       </svg>
                     </div>
                   )}
+                </div>
+
+                {/* Column 2: Track Metadata & Transport Controls */}
+                <div className={styles.nowPlayingMetaCol}>
                   <div className={styles.nowPlayingMeta}>
                     <span className={styles.nowPlayingTitle} title={nowPlaying.title}>
                       {nowPlaying.title}
                     </span>
-                    <div className={styles.nowPlayingSubtitleRow}>
-                      <div className={styles.nowPlayingEqualizer}>
-                        <span />
-                        <span />
-                        <span />
-                      </div>
-                      <span className={styles.nowPlayingArtist} title={nowPlaying.artist}>
-                        {nowPlaying.artist || 'Media Audio'}
-                      </span>
-                    </div>
+                    <span className={styles.nowPlayingArtist} title={nowPlaying.artist}>
+                      {nowPlaying.artist || 'Media Audio'}
+                    </span>
+                  </div>
+
+                  <div className={styles.nowPlayingControls}>
+                    <button
+                      type="button"
+                      className={styles.mediaMiniBtn}
+                      onClick={() => {
+                        if (soundEnabled) playUiClick();
+                        nowPlaying.prev?.();
+                      }}
+                      title="Previous track"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                        <polygon points="19 20 9 12 19 4 19 20" />
+                        <line x1="5" y1="4" x2="5" y2="20" stroke="currentColor" strokeWidth="2.5" />
+                      </svg>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`${styles.mediaMiniBtn} ${nowPlaying?.isPlaying ? styles.mediaMiniBtnActive : ''}`}
+                      onClick={() => {
+                        if (soundEnabled) playUiClick();
+                        nowPlaying.playPause?.();
+                      }}
+                      title={nowPlaying?.isPlaying ? 'Pause track' : 'Play track'}
+                    >
+                      {nowPlaying?.isPlaying ? (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                          <rect x="6" y="4" width="4" height="16" rx="1" />
+                          <rect x="14" y="4" width="4" height="16" rx="1" />
+                        </svg>
+                      ) : (
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                          <polygon points="6 4 20 12 6 20 6 4" />
+                        </svg>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      className={styles.mediaMiniBtn}
+                      onClick={() => {
+                        if (soundEnabled) playUiClick();
+                        nowPlaying.next?.();
+                      }}
+                      title="Next track"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                        <polygon points="5 4 15 12 5 20 5 4" />
+                        <line x1="19" y1="4" x2="19" y2="20" stroke="currentColor" strokeWidth="2.5" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
 
-                <div className={styles.nowPlayingControls}>
-                  <button
-                    type="button"
-                    className={styles.mediaMiniBtn}
-                    onClick={() => {
-                      if (soundEnabled) playUiClick();
-                      nowPlaying.prev?.();
-                    }}
-                    title="Previous track"
-                  >
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-                      <polygon points="19 20 9 12 19 4 19 20" />
-                      <line x1="5" y1="4" x2="5" y2="20" stroke="currentColor" strokeWidth="2.5" />
-                    </svg>
-                  </button>
+                {/* Column 3: VFD Equalizer */}
+                <div className={styles.nowPlayingEqCol}>
+                  <VfdEqualizer isPlaying={Boolean(nowPlaying?.isPlaying)} />
+                </div>
 
-                  <button
-                    type="button"
-                    className={`${styles.mediaMiniBtn} ${styles.mediaMiniBtnActive}`}
-                    onClick={() => {
-                      if (soundEnabled) playUiClick();
-                      nowPlaying.playPause?.();
-                    }}
-                    title="Pause / Resume track"
-                  >
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-                      <rect x="6" y="4" width="4" height="16" rx="1" />
-                      <rect x="14" y="4" width="4" height="16" rx="1" />
-                    </svg>
-                  </button>
-
-                  <button
-                    type="button"
-                    className={styles.mediaMiniBtn}
-                    onClick={() => {
-                      if (soundEnabled) playUiClick();
-                      nowPlaying.next?.();
-                    }}
-                    title="Next track"
-                  >
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-                      <polygon points="5 4 15 12 5 20 5 4" />
-                      <line x1="19" y1="4" x2="19" y2="20" stroke="currentColor" strokeWidth="2.5" />
-                    </svg>
-                  </button>
+                {/* Column 4: Hairline Divider & Skeuomorphic Volume Fader */}
+                <div className={styles.nowPlayingFaderCol}>
+                  <div className={styles.mediaCardDivider} />
+                  <SkeuoVolumeFader initialVolume={mediaVolume} onChange={handleMediaVolumeChange} />
                 </div>
               </div>
             )}
@@ -1462,6 +1496,33 @@ export default function ExpandedView({
                       aria-label="Include in screenshots"
                     >
                       <div className={styles.toggleThumb} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Welcome Onboarding Tour Replay */}
+                <div className={`${styles.settingsRow} ${styles.settingsRowTwoLine}`}>
+                  <div className={styles.rowLabelGroup}>
+                    <span className={styles.rowLabel}>Welcome introduction</span>
+                    <span className={styles.rowSubtitle}>
+                      Review gestures, glances, and shortcuts
+                    </span>
+                  </div>
+                  <div className={styles.rowControl}>
+                    <button
+                      type="button"
+                      className={styles.resetActionBtn}
+                      onClick={() => {
+                        if (soundEnabled) playUiClick();
+                        onReplayOnboarding?.();
+                      }}
+                      title="Replay onboarding tour"
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="1 4 1 10 7 10" />
+                        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                      </svg>
+                      Replay
                     </button>
                   </div>
                 </div>
