@@ -1,0 +1,92 @@
+/* 1980s Retro VFD Graphic Equalizer Styles */
+
+.vfdContainer {
+  width: 92px;
+  height: 38px;
+  box-sizing: border-box;
+  background: #06080a;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  box-shadow:
+    inset 0 1.5px 4px rgba(0, 0, 0, 0.9),
+    0 0.5px 0 rgba(255, 255, 255, 0.05);
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 6px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.vfdColumn {
+  width: 8px;
+  height: 100%;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 1.5px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.vfdSegment {
+  width: 100%;
+  height: 3.5px;
+  border-radius: 1px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  background: rgba(0, 229, 201, 0.07);
+  box-shadow: inset 0 0.5px 1px rgba(0, 0, 0, 0.6);
+  transition: background 60ms ease, box-shadow 60ms ease;
+}
+
+/* Subtle phosphor trace for unlit higher frequency threshold bars */
+.vfdSegment.warn:not(.lit) {
+  background: rgba(255, 184, 52, 0.08);
+}
+
+.vfdSegment.peak:not(.lit) {
+  background: rgba(255, 85, 51, 0.08);
+}
+
+/* Base segments (index 0–3, lines 1-4): Phosphor Cyan */
+.vfdSegment.lit.base {
+  background: #00e5c9;
+  box-shadow: 0 0 4px rgba(0, 229, 201, 0.65);
+}
+
+/* Upper Mid segment (index 4, line 5): Ice Cyan */
+.vfdSegment.lit.mid {
+  background: #80f7eb;
+  box-shadow: 0 0 4px rgba(128, 247, 235, 0.65);
+}
+
+/* Warning segment (index 5, line 6): Warm Amber */
+.vfdSegment.lit.warn {
+  background: #ffb834;
+  box-shadow: 0 0 4px rgba(255, 184, 52, 0.70);
+}
+
+/* Peak segment (index 6, line 7): Ruby-Amber Peak */
+.vfdSegment.lit.peak {
+  background: #ff5533;
+  box-shadow: 0 0 5px rgba(255, 85, 51, 0.75);
+}
+
+/* Peak-hold dot styling when holding above current level */
+.vfdSegment.peakHold {
+  filter: brightness(1.1);
+}
+
+/* Resting state: lowest single base segment faintly illuminated */
+.vfdSegment.resting {
+  background: rgba(0, 229, 201, 0.22);
+  box-shadow: 0 0 2.5px rgba(0, 229, 201, 0.20);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vfdSegment {
+    transition: none;
+  }
+}
