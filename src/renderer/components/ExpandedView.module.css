@@ -830,17 +830,303 @@
   font-feature-settings: 'tnum' 1;
 }
 
-/* ── TAB 5: SETTINGS (Cardless Flat Layout) ──────────── */
+/* ── TAB 5: SETTINGS (Apple Inset Grouped Architecture) ──────────── */
 .settingsTab {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   width: 100%;
   height: 100%;
   overflow-y: auto;
-  padding-right: 2px;
+  padding: 2px 4px 16px 2px;
+  box-sizing: border-box;
 }
 
+/* Apple Minimalist Smooth Scrollbar */
+.settingsTab::-webkit-scrollbar {
+  width: 4px;
+}
+
+.settingsTab::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.settingsTab::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+
+.settingsTab::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* Group Container & Header */
+.settingsGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+}
+
+.settingsGroupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text-tertiary);
+  text-transform: none; /* Strict enforcement of sentence case */
+  user-select: none;
+}
+
+/* Inset Grouped Glass Card */
+.settingsGroupCard {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Inset Grouped Row */
+.settingsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 40px;
+  padding: 8px 12px;
+  position: relative;
+  transition: background 120ms ease;
+  box-sizing: border-box;
+}
+
+.settingsRow:hover {
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.settingsRowTwoLine {
+  min-height: 48px;
+  padding: 7px 12px;
+}
+
+/* Left-Inset Hairline Divider (Preserves Card Perimeter Continuity) */
+.settingsRow:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 12px;
+  right: 0;
+  height: 1px;
+  background: var(--divider-hairline, rgba(255, 255, 255, 0.045));
+  pointer-events: none;
+}
+
+/* Label Hierarchy */
+.rowLabelGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  padding-right: 12px;
+}
+
+.rowLabel {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.rowSubtitle {
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--text-tertiary);
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+/* Right-Edge Control Anchor */
+.rowControl {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  min-height: 26px;
+}
+
+/* ── Precision Stepper Pill (Apple Capsule Standard) ── */
+.stepperPill {
+  display: flex;
+  align-items: center;
+  height: 26px;
+  padding: 2px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.stepperBtn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: all 120ms ease;
+}
+
+.stepperBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+}
+
+.stepperBtn:active {
+  transform: scale(0.90);
+}
+
+.stepperBtn:focus-visible {
+  outline: 2px solid rgba(92, 119, 189, 0.7);
+  outline-offset: 1px;
+}
+
+.stepperValue {
+  min-width: 32px;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  color: var(--text-primary);
+  padding: 0 4px;
+}
+
+/* ── Segmented Pill Control (Harmony across chips & modes) ── */
+.segmentedControlSmall {
+  display: flex;
+  align-items: center;
+  height: 26px;
+  padding: 2px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  gap: 2px;
+  box-sizing: border-box;
+}
+
+.segmentedBtnSmall {
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: transparent;
+  border: none;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 120ms ease;
+  white-space: nowrap;
+  line-height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.segmentedBtnSmall:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.segmentedBtnSmallActive {
+  background: var(--accent-bar-gradient, linear-gradient(135deg, #485c8e 0%, #768ebd 100%));
+  color: #ffffff !important;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.segmentedBtnSmall:focus-visible {
+  outline: 2px solid rgba(92, 119, 189, 0.7);
+  outline-offset: 1px;
+}
+
+/* ── Polite Reset Button (Snap to Center) ── */
+.resetActionBtn {
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 120ms ease;
+}
+
+.resetActionBtn:hover {
+  background: rgba(255, 255, 255, 0.10);
+  color: var(--text-primary);
+}
+
+.resetActionBtn:active {
+  transform: scale(0.95);
+}
+
+.resetActionBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+  transform: none;
+}
+
+/* ── Refined Display Select Dropdown ── */
+.displaySelectWrapper {
+  height: 26px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  box-sizing: border-box;
+}
+
+.displayIcon {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.displaySelect {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+.displaySelect option {
+  background: #121216;
+  color: #ffffff;
+}
+
+/* ── Backward-compatible Fallback Classes ── */
 .flatSection {
   display: flex;
   flex-direction: column;
@@ -848,12 +1134,19 @@
   margin-bottom: 4px;
 }
 
+.sectionTitle {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  padding: 4px 2px 2px;
+}
+
 .flatRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 33px;
-  padding: 4px 2px;
+  min-height: 38px;
+  padding: 6px 4px;
   border-bottom: 1px solid var(--divider-hairline, rgba(255, 255, 255, 0.045));
 }
 
@@ -864,63 +1157,6 @@
 .flatLabel {
   font-size: 11px;
   color: var(--text-primary);
-}
-
-.durationInlineStrip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 4px 2px 8px;
-  border-bottom: 1px solid var(--divider-hairline, rgba(255, 255, 255, 0.045));
-}
-
-.durationInlineItem {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.durationLabel {
-  font-size: 10px;
-  color: var(--text-secondary);
-}
-
-.stepperPill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 999px;
-  padding: 2px 6px;
-  font-size: 11px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.stepperPill button {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 12px;
-  cursor: pointer;
-  padding: 0 2px;
-}
-
-.stepperPill button:hover {
-  color: var(--text-primary);
-}
-
-.opacityControls {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.opacityPresets {
-  display: flex;
-  align-items: center;
-  gap: 3px;
 }
 
 .presetChipSmall {
@@ -966,6 +1202,11 @@
   box-sizing: border-box;
   outline: none;
   flex-shrink: 0;
+}
+
+.toggleSwitch:focus-visible {
+  outline: 2px solid rgba(92, 119, 189, 0.7);
+  outline-offset: 2px;
 }
 
 .toggleOn {
@@ -1024,37 +1265,6 @@
 
 .toggleOn:active .toggleThumb {
   transform: translateX(17px) scale(0.96);
-}
-
-.displaySelectWrapper {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  padding: 3px 8px;
-}
-
-.displayIcon {
-  color: var(--text-secondary);
-  flex-shrink: 0;
-}
-
-.displaySelect {
-  flex: 1;
-  background: transparent;
-  border: none;
-  color: var(--text-primary);
-  font-size: 11px;
-  font-family: inherit;
-  outline: none;
-  cursor: pointer;
-}
-
-.displaySelect option {
-  background: #121216;
-  color: #ffffff;
 }
 
 /* ── Task Session Pips ──────────────────────────────────── */

@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getNowPlaying: () => ipcRenderer.invoke('get-now-playing'),
   mediaControl: (action) => ipcRenderer.send('media-control', action),
   setTopMargin: (margin) => ipcRenderer.send('set-top-margin', margin),
+  setCaptureVisibility: (type, value) => ipcRenderer.send('set-capture-visibility', { type, value }),
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
   store: {
     get: (key, defaultValue) => ipcRenderer.sendSync('store-get', key, defaultValue),

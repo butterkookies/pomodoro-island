@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { AnimatePresence, motion, useMotionValue, animate } from 'framer-motion';
 import CompactView from './CompactView';
 import ExpandedView from './ExpandedView';
 import ReminderBanner from './ReminderBanner';
 import styles from './Island.module.css';
-import { SPRING, SPRING_CONTAINER } from '../../shared/constants';
+import { SPRING, SPRING_CONTAINER, SPRING_LIQUID, BEZEL_SNAP_THRESHOLD } from '../../shared/constants';
+import { playSnapHaptic } from '../utils/soundManager';
 
 // Apple Dynamic Island view entry/exit transitions (scale 0.98->1 over 180ms, 1->0.99 over 100ms)
 const viewVariants = {
@@ -33,6 +34,7 @@ const viewVariants = {
 export default function Island({
   islandRef,
   islandState,
+  reportBounds,
   onMouseEnter,
   onMouseLeave,
   onClick,
@@ -144,30 +146,153 @@ export default function Island({
           earHeight: 14,
         };
 
+  // Persisted horizontal offset along top monitor bezel
+  const savedOffset = window.electronAPI?.store?.get('horizontalOffset', 0) ?? 0;
+  const x = useMotionValue(savedOffset);
+  const [currentOffsetX, setCurrentOffsetX] = useState(savedOffset);
+  const [isSnapped, setIsSnapped] = useState(Math.abs(savedOffset) <= BEZEL_SNAP_THRESHOLD);
+  const [isDragging, setIsDragging] = useState(false);
+  const isSnappedRef = useRef(Math.abs(savedOffset) <= BEZEL_SNAP_THRESHOLD);
+  const isDraggingRef = useRef(false);
+
+  // Sync motion value if currentOffsetX changes programmatically
+  useEffect(() => {
+    x.set(currentOffsetX);
+  }, [currentOffsetX, x]);
+
+  // Max horizontal drag boundary (leaves comfortable margin from screen edge)
+  const maxDrag = Math.max(120, Math.floor((window.innerWidth || 1920) / 2 - dims.width / 2 - 16));
+
+  const handleResetPosition = useCallback(() => {
+    animate(x, 0, {
+      ...SPRING_LIQUID,
+      onComplete: () => {
+        reportBounds?.();
+      },
+    });
+    setCurrentOffsetX(0);
+    setIsSnapped(true);
+    isSnappedRef.current = true;
+    window.electronAPI?.store?.set('horizontalOffset', 0);
+    playSnapHaptic();
+    setTimeout(() => {
+      reportBounds?.();
+    }, 250);
+  }, [x, reportBounds]);
+
+  const handleDragStart = () => {
+    isDraggingRef.current = true;
+    setIsDragging(true);
+  };
+
+  const handleDrag = () => {
+    const curX = x.get();
+    const distToCenter = Math.abs(curX);
+
+    if (distToCenter <= BEZEL_SNAP_THRESHOLD) {
+      if (!isSnappedRef.current) {
+        isSnappedRef.current = true;
+        setIsSnapped(true);
+        playSnapHaptic();
+      }
+    } else {
+      if (isSnappedRef.current) {
+        isSnappedRef.current = false;
+        setIsSnapped(false);
+      }
+    }
+    reportBounds?.();
+  };
+
+  const handleDragEnd = (_event, info) => {
+    isDraggingRef.current = false;
+    setIsDragging(false);
+
+    const curX = x.get();
+    const velocityX = info?.velocity?.x || 0;
+    const projected = curX + velocityX * 0.12;
+
+    // Magnetic snap to center if released near or thrown toward center
+    if (Math.abs(curX) <= BEZEL_SNAP_THRESHOLD || Math.abs(projected) <= BEZEL_SNAP_THRESHOLD) {
+      animate(x, 0, {
+        ...SPRING_LIQUID,
+        velocity: velocityX,
+        onComplete: () => {
+          reportBounds?.();
+        },
+      });
+      if (!isSnappedRef.current) {
+        playSnapHaptic();
+      }
+      isSnappedRef.current = true;
+      setIsSnapped(true);
+      setCurrentOffsetX(0);
+      window.electronAPI?.store?.set('horizontalOffset', 0);
+    } else {
+      const clamped = Math.max(-maxDrag, Math.min(maxDrag, Math.round(curX)));
+      animate(x, clamped, {
+        ...SPRING_LIQUID,
+        velocity: velocityX,
+        onComplete: () => {
+          reportBounds?.();
+        },
+      });
+      isSnappedRef.current = false;
+      setIsSnapped(false);
+      setCurrentOffsetX(clamped);
+      window.electronAPI?.store?.set('horizontalOffset', clamped);
+    }
+
+    setTimeout(() => {
+      reportBounds?.();
+    }, 200);
+  };
+
   return (
     <motion.div
       ref={islandRef}
       className={styles.island}
       layout
+      drag="x"
+      dragConstraints={{ left: -maxDrag, right: maxDrag }}
+      dragElastic={0.12}
+      dragMomentum={false}
+      onDragStart={handleDragStart}
+      onDrag={handleDrag}
+      onDragEnd={handleDragEnd}
       animate={{
         width: dims.width,
         height: dims.height,
+        scaleX: isDragging ? 1.015 : 1,
+        scaleY: isDragging ? 0.985 : 1,
       }}
       transition={SPRING_CONTAINER}
       style={{
+        x,
         '--island-bg': islandBg,
         '--ear-border': borderColor,
         borderRadius: radius,
         boxShadow:
           islandState !== 'idle'
-            ? '0 16px 36px rgba(0, 0, 0, 0.75)'
-            : '0 4px 14px rgba(0, 0, 0, 0.4)',
+            ? '0 2px 5px rgba(0, 0, 0, 0.08), 0 8px 18px rgba(0, 0, 0, 0.16), 0 18px 36px rgba(0, 0, 0, 0.22), 0 32px 64px rgba(0, 0, 0, 0.16)'
+            : '0 2px 5px rgba(0, 0, 0, 0.08), 0 6px 16px rgba(0, 0, 0, 0.14), 0 12px 28px rgba(0, 0, 0, 0.10)',
         position: 'relative',
       }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       onClick={onClick}
+      onDoubleClick={handleResetPosition}
     >
+      {/* ── Magnetic Center Alignment Tick ── */}
+      <motion.div
+        className={styles.magneticGuideTick}
+        initial={false}
+        animate={{
+          opacity: isSnapped && isDragging ? 1 : 0,
+          scaleY: isSnapped && isDragging ? 1 : 0.3,
+        }}
+        transition={{ duration: 0.15 }}
+      />
       {/* ── Left Concave Ear (Smooth Tangent Flare into Screen Bezel) ── */}
       <motion.svg
         className={styles.notchEarLeft}
@@ -180,6 +305,9 @@ export default function Island({
           left: -earConfig.earWidth + 1,
         }}
         transition={SPRING_CONTAINER}
+        style={{
+          opacity: 'var(--island-opacity, 0.95)',
+        }}
       >
         <defs>
           <linearGradient id="earStrokeLeft" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -187,7 +315,7 @@ export default function Island({
             <stop offset="100%" stopColor="var(--ear-border)" />
           </linearGradient>
         </defs>
-        <path d="M 0 0 C 7 0 14 7 14 14 L 15 14 L 15 0 Z" fill="var(--island-bg)" />
+        <path className={styles.earFill} d="M 0 0 C 7 0 14 7 14 14 L 15 14 L 15 0 Z" fill="#000000" />
         <path d="M 0 0 C 7 0 14 7 14 14" stroke="url(#earStrokeLeft)" strokeWidth="1" vectorEffect="non-scaling-stroke" fill="none" />
       </motion.svg>
 
@@ -203,6 +331,9 @@ export default function Island({
           right: -earConfig.earWidth + 1,
         }}
         transition={SPRING_CONTAINER}
+        style={{
+          opacity: 'var(--island-opacity, 0.95)',
+        }}
       >
         <defs>
           <linearGradient id="earStrokeRight" x1="100%" y1="0%" x2="0%" y2="100%">
@@ -210,7 +341,7 @@ export default function Island({
             <stop offset="100%" stopColor="var(--ear-border)" />
           </linearGradient>
         </defs>
-        <path d="M 15 0 C 8 0 1 7 1 14 L 0 14 L 0 0 Z" fill="var(--island-bg)" />
+        <path className={styles.earFill} d="M 15 0 C 8 0 1 7 1 14 L 0 14 L 0 0 Z" fill="#000000" />
         <path d="M 15 0 C 8 0 1 7 1 14" stroke="url(#earStrokeRight)" strokeWidth="1" vectorEffect="non-scaling-stroke" fill="none" />
       </motion.svg>
 
@@ -366,6 +497,8 @@ export default function Island({
                 notchSettings={notchSettings}
                 onUpdateNotchSetting={onUpdateNotchSetting}
                 onResetNotchSettings={onResetNotchSettings}
+                horizontalOffset={currentOffsetX}
+                onResetPosition={handleResetPosition}
               />
             </motion.div>
           )}

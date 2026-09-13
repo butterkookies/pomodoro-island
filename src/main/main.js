@@ -37,6 +37,23 @@ let isNotchVisible = true;
 let isModalOpen = false;   // when a dev feedback popover, drawer, or modal is open
 let currentStatus = { text: 'Focus', time: '25:00' };
 let islandBounds = null;  // { left, top, right, bottom } in window-relative CSS px, from renderer
+let hoverDwellTimer = null; // Intent buffer timer for anti-swipe dwell delay
+let includeInRecordings = store.get('includeInRecordings', true);
+let includeInScreenshots = store.get('includeInScreenshots', true);
+
+function updateContentProtection() {
+  if (!win || win.isDestroyed()) return;
+  // If either screen recording or screenshots are excluded by the user,
+  // setContentProtection(true) sets WDA_EXCLUDEFROMCAPTURE in Windows
+  // so the island is excluded from screen recordings, OBS, Discord, and screenshots.
+  const shouldProtect = !includeInRecordings || !includeInScreenshots;
+  try {
+    win.setContentProtection(shouldProtect);
+    console.log('[Main] Content protection set to:', shouldProtect ? 'EXCLUDED from capture' : 'INCLUDED in capture');
+  } catch (err) {
+    console.error('[Main] setContentProtection error:', err);
+  }
+}
 
 function getTargetDisplay() {
   const displays = screen.getAllDisplays();
@@ -54,9 +71,12 @@ function setDisplay(displayId) {
   store.set('selectedDisplayId', target.id);
   const topMargin = store.get('topMargin', 0);
   if (win && !win.isDestroyed()) {
-    const x = Math.floor(target.bounds.x + target.bounds.width / 2 - OVERLAY_WIDTH / 2);
-    const y = target.bounds.y + topMargin;
-    win.setBounds({ x, y, width: OVERLAY_WIDTH, height: OVERLAY_HEIGHT });
+    win.setBounds({
+      x: target.bounds.x,
+      y: target.bounds.y + topMargin,
+      width: target.bounds.width,
+      height: OVERLAY_HEIGHT,
+    });
   }
   updateTray();
 }
@@ -131,13 +151,13 @@ function updateTray() {
 function createWindow() {
   const display = getTargetDisplay();
   const topMargin = store.get('topMargin', 0);
-  const x = Math.floor(display.bounds.x + display.bounds.width / 2 - OVERLAY_WIDTH / 2);
+  const x = display.bounds.x;
   const y = display.bounds.y + topMargin;
 
   const winInstance = new BrowserWindow({
     x,
     y,
-    width: OVERLAY_WIDTH,
+    width: display.bounds.width,
     height: OVERLAY_HEIGHT,
     transparent: true,
     frame: false,
@@ -156,6 +176,7 @@ function createWindow() {
     winInstance.show();
     winInstance.setAlwaysOnTop(true, 'screen-saver');
     winInstance.focus();
+    updateContentProtection();
     console.log('[Main] ready-to-show: window shown and focused. Bounds:', winInstance.getBounds());
   });
 
@@ -199,10 +220,24 @@ app.whenReady().then(() => {
     win.loadFile(indexPath);
   }
 
+  screen.on('display-metrics-changed', () => {
+    const target = getTargetDisplay();
+    const topMargin = store.get('topMargin', 0);
+    if (win && !win.isDestroyed()) {
+      win.setBounds({
+        x: target.bounds.x,
+        y: target.bounds.y + topMargin,
+        width: target.bounds.width,
+        height: OVERLAY_HEIGHT,
+      });
+    }
+  });
+
   // ── Cursor polling ─────────────────────────────────
-  // In idle state: broad hover-zone detection (same as before).
-  // In non-idle state: precise hit-test against the island element bounds
-  // so clicks outside the pill pass through to whatever is underneath.
+  // In idle state: hover-zone detection with 180ms dwell delay to avoid accidental triggers
+  // when moving mouse across browser tabs.
+  // In non-idle state: precise hit-test against live island element bounds
+  // so clicks outside the pill pass through cleanly to whatever is underneath.
   setInterval(() => {
     if (!win) return;
 
@@ -213,6 +248,10 @@ app.whenReady().then(() => {
 
     // While a modal or feedback popover/drawer is open, ensure mouse events are interactive
     if (isModalOpen) {
+      if (hoverDwellTimer) {
+        clearTimeout(hoverDwellTimer);
+        hoverDwellTimer = null;
+      }
       if (!isOverIsland) {
         isOverIsland = true;
         win.setIgnoreMouseEvents(false);
@@ -220,39 +259,56 @@ app.whenReady().then(() => {
       return;
     }
 
-    if (isIdle) {
-      // Narrow hover zone to actual idle island width (170px) + comfortable padding (220px total)
-      // centered at the top, preventing Windows Snap Layout drops outside center from popping open
-      const idleCorridorMin = (bounds.width - 220) / 2;
-      const idleCorridorMax = (bounds.width + 220) / 2;
-      const inHoverZone =
+    // Determine if cursor is currently within the active island area (strictly the physical pill)
+    let inIslandZone = false;
+    if (islandBounds) {
+      inIslandZone =
+        relX >= islandBounds.left &&
+        relX <= islandBounds.right &&
+        relY >= (islandBounds.top || 0) &&
+        relY <= islandBounds.bottom;
+    } else {
+      // Initial fallback before first bounds report
+      const idleCorridorMin = (bounds.width - 184) / 2;
+      const idleCorridorMax = (bounds.width + 184) / 2;
+      inIslandZone =
         relX >= idleCorridorMin &&
         relX <= idleCorridorMax &&
         relY >= 0 &&
-        relY <= HOVER_ZONE_HEIGHT;
+        relY <= (isIdle ? 32 : 52);
+    }
 
-      if (inHoverZone && !isOverIsland) {
-        isOverIsland = true;
-        win.setIgnoreMouseEvents(false);
-        win.webContents.send('cursor-enter-island');
+    if (isIdle) {
+      if (inIslandZone) {
+        // Cursor entered hover zone: initiate dwell delay buffer (180ms)
+        if (!isOverIsland && !hoverDwellTimer) {
+          hoverDwellTimer = setTimeout(() => {
+            hoverDwellTimer = null;
+            if (!win || win.isDestroyed()) return;
+            isOverIsland = true;
+            win.setIgnoreMouseEvents(false);
+            win.webContents.send('cursor-enter-island');
+          }, 180);
+        }
+      } else {
+        // Cursor left hover zone: cancel any pending dwell timer
+        if (hoverDwellTimer) {
+          clearTimeout(hoverDwellTimer);
+          hoverDwellTimer = null;
+        }
+        if (isOverIsland) {
+          isOverIsland = false;
+          win.setIgnoreMouseEvents(true, { forward: true });
+        }
       }
       return;
     }
 
     // Non-idle: precise island-element hit-test
-    if (!islandBounds) return;
-
-    const pad = 8;
-    const overIsland =
-      relX >= islandBounds.left - pad &&
-      relX <= islandBounds.right + pad &&
-      relY >= islandBounds.top - pad &&
-      relY <= islandBounds.bottom + pad;
-
-    if (overIsland && !isOverIsland) {
+    if (inIslandZone && !isOverIsland) {
       isOverIsland = true;
       win.setIgnoreMouseEvents(false);
-    } else if (!overIsland && isOverIsland) {
+    } else if (!inIslandZone && isOverIsland) {
       isOverIsland = false;
       // { forward: true } keeps mousemove flowing to the renderer so the
       // leave-to-idle timer still works, but clicks fall through to the browser.
@@ -322,9 +378,12 @@ app.whenReady().then(() => {
     store.set('topMargin', val);
     const target = getTargetDisplay();
     if (win && !win.isDestroyed()) {
-      const x = Math.floor(target.bounds.x + target.bounds.width / 2 - OVERLAY_WIDTH / 2);
-      const y = target.bounds.y + val;
-      win.setBounds({ x, y, width: OVERLAY_WIDTH, height: OVERLAY_HEIGHT });
+      win.setBounds({
+        x: target.bounds.x,
+        y: target.bounds.y + val,
+        width: target.bounds.width,
+        height: OVERLAY_HEIGHT,
+      });
     }
   });
 
@@ -338,10 +397,14 @@ app.whenReady().then(() => {
 
   ipcMain.on('set-click-through', (_event, value) => {
     isIdle = value;
+    if (hoverDwellTimer) {
+      clearTimeout(hoverDwellTimer);
+      hoverDwellTimer = null;
+    }
     if (value) {
-      // Transitioning to idle: fully click-through, reset tracking
+      // Transitioning to idle: click-through on transparent, track mousemove
       isOverIsland = false;
-      win.setIgnoreMouseEvents(true);
+      win.setIgnoreMouseEvents(true, { forward: true });
     }
     // Non-idle: polling handles setIgnoreMouseEvents based on cursor position
   });
@@ -358,6 +421,22 @@ app.whenReady().then(() => {
 
   ipcMain.on('update-island-bounds', (_event, bounds) => {
     islandBounds = bounds;
+  });
+
+  ipcMain.on('set-capture-visibility', (_event, { type, value }) => {
+    if (type === 'recordings') {
+      includeInRecordings = Boolean(value);
+      store.set('includeInRecordings', includeInRecordings);
+    } else if (type === 'screenshots') {
+      includeInScreenshots = Boolean(value);
+      store.set('includeInScreenshots', includeInScreenshots);
+    } else if (type === 'both') {
+      includeInRecordings = Boolean(value);
+      includeInScreenshots = Boolean(value);
+      store.set('includeInRecordings', includeInRecordings);
+      store.set('includeInScreenshots', includeInScreenshots);
+    }
+    updateContentProtection();
   });
 
   ipcMain.handle('get-displays', () => {

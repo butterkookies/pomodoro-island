@@ -24,6 +24,7 @@ export function useIslandState(options = {}) {
     const stateRef = useRef('compact');
     const prevStateRef = useRef('compact');
     const leaveTimerRef = useRef(null);
+    const dwellTimerRef = useRef(null);
     const islandRef = useRef(null); // attached to the island DOM node
     const preventIdleRef = useRef(preventIdle);
 
@@ -32,6 +33,8 @@ export function useIslandState(options = {}) {
         if (preventIdle) {
             clearTimeout(leaveTimerRef.current);
             leaveTimerRef.current = null;
+            clearTimeout(dwellTimerRef.current);
+            dwellTimerRef.current = null;
         }
     }, [preventIdle]);
 
@@ -39,6 +42,8 @@ export function useIslandState(options = {}) {
     const safeSetState = useCallback((newState) => {
         clearTimeout(leaveTimerRef.current);
         leaveTimerRef.current = null;
+        clearTimeout(dwellTimerRef.current);
+        dwellTimerRef.current = null;
         if (newState === 'idle') {
             window.electronAPI?.setClickThrough(true);
         } else {
@@ -81,13 +86,11 @@ export function useIslandState(options = {}) {
             if (!el) return;
 
             const rect = el.getBoundingClientRect();
-            const padX = 16;
-            const padY = 8;
             const inside =
-                e.clientX >= rect.left - padX &&
-                e.clientX <= rect.right + padX &&
+                e.clientX >= rect.left &&
+                e.clientX <= rect.right &&
                 e.clientY >= rect.top &&
-                e.clientY <= rect.bottom + padY;
+                e.clientY <= rect.bottom;
 
             if (inside) {
                 // Mouse is over the island — cancel any pending leave
@@ -95,10 +98,22 @@ export function useIslandState(options = {}) {
                 leaveTimerRef.current = null;
 
                 if (stateRef.current === 'idle') {
-                    safeSetState('compact');
+                    if (!dwellTimerRef.current) {
+                        dwellTimerRef.current = setTimeout(() => {
+                            dwellTimerRef.current = null;
+                            if (stateRef.current === 'idle') {
+                                safeSetState('compact');
+                            }
+                        }, 180);
+                    }
                 }
             } else {
-                // Mouse left the island area.
+                // Mouse left the island area — cancel pending dwell timer
+                if (dwellTimerRef.current) {
+                    clearTimeout(dwellTimerRef.current);
+                    dwellTimerRef.current = null;
+                }
+
                 // Only compact (glance) view auto-settles to idle.
                 // Expanded view stays open for user interaction until collapsed.
                 if (stateRef.current === 'compact' && leaveTimerRef.current === null && !preventIdleRef.current) {
@@ -121,6 +136,10 @@ export function useIslandState(options = {}) {
         window.electronAPI?.onCursorEnterIsland(() => {
             clearTimeout(leaveTimerRef.current);
             leaveTimerRef.current = null;
+            if (dwellTimerRef.current) {
+                clearTimeout(dwellTimerRef.current);
+                dwellTimerRef.current = null;
+            }
             if (stateRef.current === 'idle') {
                 safeSetState('compact');
             }
@@ -174,36 +193,41 @@ export function useIslandState(options = {}) {
     }, [safeSetState]);
 
     // Report island element bounds to main so it can do precise click-through
+    const reportBounds = useCallback(() => {
+        const el = islandRef.current;
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        window.electronAPI?.updateIslandBounds({
+            left: Math.round(rect.left),
+            top: Math.round(rect.top),
+            right: Math.round(rect.right),
+            bottom: Math.round(rect.bottom),
+        });
+    }, []);
+
     useEffect(() => {
-        if (state === 'idle') return;
         const el = islandRef.current;
         if (!el) return;
 
-        function report() {
-            const rect = el.getBoundingClientRect();
-            window.electronAPI?.updateIslandBounds({
-                left: rect.left - 20,
-                top: rect.top,
-                right: rect.right + 20,
-                bottom: rect.bottom + 76,
-            });
-        }
-
-        report();
-        const ro = new ResizeObserver(report);
+        reportBounds();
+        const ro = new ResizeObserver(reportBounds);
         ro.observe(el);
         return () => ro.disconnect();
-    }, [state]);
+    }, [state, reportBounds]);
 
     // Cleanup on unmount
     useEffect(() => {
-        return () => clearTimeout(leaveTimerRef.current);
+        return () => {
+            clearTimeout(leaveTimerRef.current);
+            clearTimeout(dwellTimerRef.current);
+        };
     }, []);
 
     return {
         state,
         setState: safeSetState,
         islandRef,
+        reportBounds,
         handleClick,
         handleMouseEnter: () => {},
         handleMouseLeave: () => {},

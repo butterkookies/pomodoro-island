@@ -90,6 +90,8 @@ export default function ExpandedView({
   notchSettings = {},
   onUpdateNotchSetting,
   onResetNotchSettings,
+  horizontalOffset = 0,
+  onResetPosition,
 }) {
   const [newNoteText, setNewNoteText] = useState('');
   const [customTimerName, setCustomTimerName] = useState('');
@@ -120,6 +122,12 @@ export default function ExpandedView({
   });
   const [islandOpacity, setIslandOpacityState] = useState(() => {
     return window.electronAPI?.store?.get('islandOpacity') ?? 95;
+  });
+  const [includeInRecordings, setIncludeInRecordings] = useState(() => {
+    return window.electronAPI?.store?.get('includeInRecordings', true) ?? true;
+  });
+  const [includeInScreenshots, setIncludeInScreenshots] = useState(() => {
+    return window.electronAPI?.store?.get('includeInScreenshots', true) ?? true;
   });
 
   useEffect(() => {
@@ -194,6 +202,43 @@ export default function ExpandedView({
     setSoundEnabled(next);
     window.electronAPI?.store?.set('soundEffectsEnabled', next);
     if (next) playUiClick();
+  }
+
+  function handleToggleRecordings() {
+    const next = !includeInRecordings;
+    setIncludeInRecordings(next);
+    window.electronAPI?.setCaptureVisibility?.('recordings', next);
+    if (soundEnabled) playUiClick();
+  }
+
+  function handleToggleScreenshots() {
+    const next = !includeInScreenshots;
+    setIncludeInScreenshots(next);
+    window.electronAPI?.setCaptureVisibility?.('screenshots', next);
+    if (soundEnabled) playUiClick();
+  }
+
+  function handleCapturePreset(mode) {
+    if (soundEnabled) playUiClick();
+    if (mode === 'both') {
+      setIncludeInRecordings(true);
+      setIncludeInScreenshots(true);
+      window.electronAPI?.setCaptureVisibility?.('both', true);
+    } else if (mode === 'recordings') {
+      setIncludeInRecordings(true);
+      setIncludeInScreenshots(false);
+      window.electronAPI?.setCaptureVisibility?.('recordings', true);
+      window.electronAPI?.setCaptureVisibility?.('screenshots', false);
+    } else if (mode === 'screenshots') {
+      setIncludeInRecordings(false);
+      setIncludeInScreenshots(true);
+      window.electronAPI?.setCaptureVisibility?.('recordings', false);
+      window.electronAPI?.setCaptureVisibility?.('screenshots', true);
+    } else if (mode === 'none') {
+      setIncludeInRecordings(false);
+      setIncludeInScreenshots(false);
+      window.electronAPI?.setCaptureVisibility?.('both', false);
+    }
   }
 
   function handleDisplayChange(e) {
@@ -775,227 +820,411 @@ export default function ExpandedView({
           <StatsTab stats={stats} color={color} />
         )}
 
-        {/* TAB 5: SETTINGS (Clean flat list, NO CARDS!) */}
+        {/* TAB 5: SETTINGS (Apple Inset Grouped Architecture) */}
         {activeTab === 'settings' && (
           <div className={styles.settingsTab}>
-            {/* Phase Durations */}
-            <div className={styles.flatSection}>
-              <span className={styles.sectionTitle}>Phase durations</span>
-              <div className={styles.durationInlineStrip}>
-                <div className={styles.durationInlineItem}>
-                  <span className={styles.durationLabel}>Focus</span>
-                  <div className={styles.stepperPill}>
+            {/* GROUP 1: TIMER & FLOW */}
+            <div className={styles.settingsGroup}>
+              <div className={styles.settingsGroupHeader}>
+                <span>Timer & flow</span>
+              </div>
+              <div className={styles.settingsGroupCard}>
+                {/* Focus Duration */}
+                <div className={styles.settingsRow}>
+                  <span className={styles.rowLabel}>Focus duration</span>
+                  <div className={styles.rowControl}>
+                    <div className={styles.stepperPill}>
+                      <button
+                        type="button"
+                        className={styles.stepperBtn}
+                        onClick={() => {
+                          if (soundEnabled) playUiClick();
+                          onSetDuration?.('FOCUS', Math.max(5 * 60 * 1000, (durations.FOCUS || 25 * 60 * 1000) - 5 * 60 * 1000));
+                        }}
+                        title="Decrease focus duration by 5m"
+                        aria-label="Decrease focus duration"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                      </button>
+                      <span className={styles.stepperValue}>
+                        {Math.round((durations.FOCUS || 25 * 60 * 1000) / 60000)}m
+                      </span>
+                      <button
+                        type="button"
+                        className={styles.stepperBtn}
+                        onClick={() => {
+                          if (soundEnabled) playUiClick();
+                          onSetDuration?.('FOCUS', (durations.FOCUS || 25 * 60 * 1000) + 5 * 60 * 1000);
+                        }}
+                        title="Increase focus duration by 5m"
+                        aria-label="Increase focus duration"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                          <line x1="12" y1="5" x2="12" y2="19" />
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Short Break Duration */}
+                <div className={styles.settingsRow}>
+                  <span className={styles.rowLabel}>Short break</span>
+                  <div className={styles.rowControl}>
+                    <div className={styles.stepperPill}>
+                      <button
+                        type="button"
+                        className={styles.stepperBtn}
+                        onClick={() => {
+                          if (soundEnabled) playUiClick();
+                          onSetDuration?.('SHORT_BREAK', Math.max(1 * 60 * 1000, (durations.SHORT_BREAK || 5 * 60 * 1000) - 1 * 60 * 1000));
+                        }}
+                        title="Decrease short break by 1m"
+                        aria-label="Decrease short break"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                      </button>
+                      <span className={styles.stepperValue}>
+                        {Math.round((durations.SHORT_BREAK || 5 * 60 * 1000) / 60000)}m
+                      </span>
+                      <button
+                        type="button"
+                        className={styles.stepperBtn}
+                        onClick={() => {
+                          if (soundEnabled) playUiClick();
+                          onSetDuration?.('SHORT_BREAK', (durations.SHORT_BREAK || 5 * 60 * 1000) + 1 * 60 * 1000);
+                        }}
+                        title="Increase short break by 1m"
+                        aria-label="Increase short break"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                          <line x1="12" y1="5" x2="12" y2="19" />
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Long Break Duration */}
+                <div className={styles.settingsRow}>
+                  <span className={styles.rowLabel}>Long break</span>
+                  <div className={styles.rowControl}>
+                    <div className={styles.stepperPill}>
+                      <button
+                        type="button"
+                        className={styles.stepperBtn}
+                        onClick={() => {
+                          if (soundEnabled) playUiClick();
+                          onSetDuration?.('LONG_BREAK', Math.max(5 * 60 * 1000, (durations.LONG_BREAK || 15 * 60 * 1000) - 5 * 60 * 1000));
+                        }}
+                        title="Decrease long break by 5m"
+                        aria-label="Decrease long break"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                      </button>
+                      <span className={styles.stepperValue}>
+                        {Math.round((durations.LONG_BREAK || 15 * 60 * 1000) / 60000)}m
+                      </span>
+                      <button
+                        type="button"
+                        className={styles.stepperBtn}
+                        onClick={() => {
+                          if (soundEnabled) playUiClick();
+                          onSetDuration?.('LONG_BREAK', (durations.LONG_BREAK || 15 * 60 * 1000) + 5 * 60 * 1000);
+                        }}
+                        title="Increase long break by 5m"
+                        aria-label="Increase long break"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                          <line x1="12" y1="5" x2="12" y2="19" />
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Auto-start Breaks */}
+                <div className={styles.settingsRow}>
+                  <span className={styles.rowLabel}>Auto-start breaks</span>
+                  <div className={styles.rowControl}>
                     <button
-                      onClick={() => onSetDuration?.('FOCUS', Math.max(5 * 60 * 1000, (durations.FOCUS || 25 * 60 * 1000) - 5 * 60 * 1000))}
-                      title="Decrease focus duration"
+                      type="button"
+                      className={`${styles.toggleSwitch} ${autoStartBreaks ? styles.toggleOn : ''}`}
+                      onClick={() => onSetAutoStartBreaks?.(!autoStartBreaks)}
+                      aria-label="Auto-start breaks"
                     >
-                      -
-                    </button>
-                    <span>{Math.round((durations.FOCUS || 25 * 60 * 1000) / 60000)}m</span>
-                    <button
-                      onClick={() => onSetDuration?.('FOCUS', (durations.FOCUS || 25 * 60 * 1000) + 5 * 60 * 1000)}
-                      title="Increase focus duration"
-                    >
-                      +
+                      <div className={styles.toggleThumb} />
                     </button>
                   </div>
                 </div>
 
-                <div className={styles.durationInlineItem}>
-                  <span className={styles.durationLabel}>Short break</span>
-                  <div className={styles.stepperPill}>
+                {/* Auto-start Focus Sessions */}
+                <div className={styles.settingsRow}>
+                  <span className={styles.rowLabel}>Auto-start focus sessions</span>
+                  <div className={styles.rowControl}>
                     <button
-                      onClick={() => onSetDuration?.('SHORT_BREAK', Math.max(1 * 60 * 1000, (durations.SHORT_BREAK || 5 * 60 * 1000) - 1 * 60 * 1000))}
-                      title="Decrease short break"
+                      type="button"
+                      className={`${styles.toggleSwitch} ${autoStartFocus ? styles.toggleOn : ''}`}
+                      onClick={() => onSetAutoStartFocus?.(!autoStartFocus)}
+                      aria-label="Auto-start focus sessions"
                     >
-                      -
-                    </button>
-                    <span>{Math.round((durations.SHORT_BREAK || 5 * 60 * 1000) / 60000)}m</span>
-                    <button
-                      onClick={() => onSetDuration?.('SHORT_BREAK', (durations.SHORT_BREAK || 5 * 60 * 1000) + 1 * 60 * 1000)}
-                      title="Increase short break"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                <div className={styles.durationInlineItem}>
-                  <span className={styles.durationLabel}>Long break</span>
-                  <div className={styles.stepperPill}>
-                    <button
-                      onClick={() => onSetDuration?.('LONG_BREAK', Math.max(5 * 60 * 1000, (durations.LONG_BREAK || 15 * 60 * 1000) - 5 * 60 * 1000))}
-                      title="Decrease long break"
-                    >
-                      -
-                    </button>
-                    <span>{Math.round((durations.LONG_BREAK || 15 * 60 * 1000) / 60000)}m</span>
-                    <button
-                      onClick={() => onSetDuration?.('LONG_BREAK', (durations.LONG_BREAK || 15 * 60 * 1000) + 5 * 60 * 1000)}
-                      title="Increase long break"
-                    >
-                      +
+                      <div className={styles.toggleThumb} />
                     </button>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Automation & Behavior (Flat rows with hairline dividers) */}
-            <div className={styles.flatSection}>
-              <span className={styles.sectionTitle}>Automation & behavior</span>
-              <div className={styles.flatRow}>
-                <span className={styles.flatLabel}>Auto-start breaks</span>
-                <button
-                  className={`${styles.toggleSwitch} ${autoStartBreaks ? styles.toggleOn : ''}`}
-                  onClick={() => onSetAutoStartBreaks?.(!autoStartBreaks)}
-                  aria-label="Auto-start breaks"
-                >
-                  <div className={styles.toggleThumb} />
-                </button>
+            {/* GROUP 2: DISPLAY & NOTCH APPEARANCE */}
+            <div className={styles.settingsGroup}>
+              <div className={styles.settingsGroupHeader}>
+                <span>Display & notch</span>
               </div>
-
-              <div className={styles.flatRow}>
-                <span className={styles.flatLabel}>Auto-start focus sessions</span>
-                <button
-                  className={`${styles.toggleSwitch} ${autoStartFocus ? styles.toggleOn : ''}`}
-                  onClick={() => onSetAutoStartFocus?.(!autoStartFocus)}
-                  aria-label="Auto-start focus sessions"
-                >
-                  <div className={styles.toggleThumb} />
-                </button>
-              </div>
-
-              <div className={styles.flatRow}>
-                <span className={styles.flatLabel}>UI click sounds</span>
-                <button
-                  className={`${styles.toggleSwitch} ${soundEnabled ? styles.toggleOn : ''}`}
-                  onClick={handleSoundToggle}
-                  aria-label="UI click sounds"
-                >
-                  <div className={styles.toggleThumb} />
-                </button>
-              </div>
-
-              <div className={styles.flatRow}>
-                <span className={styles.flatLabel}>Launch on Windows startup</span>
-                <button
-                  className={`${styles.toggleSwitch} ${openAtLogin ? styles.toggleOn : ''}`}
-                  onClick={handleStartupToggle}
-                  aria-label="Launch on Windows startup"
-                >
-                  <div className={styles.toggleThumb} />
-                </button>
-              </div>
-
-              <div className={styles.flatRow}>
-                <span className={styles.flatLabel}>Top bezel offset</span>
-                <div className={styles.stepperPill}>
-                  <button
-                    onClick={() => handleTopMarginChange(-2)}
-                    title="Decrease top margin"
-                    aria-label="Decrease top margin"
-                  >
-                    -
-                  </button>
-                  <span>{topMargin}px</span>
-                  <button
-                    onClick={() => handleTopMarginChange(2)}
-                    title="Increase top margin"
-                    aria-label="Increase top margin"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-              <div className={styles.flatRow}>
-                <span className={styles.flatLabel}>Idle notch display</span>
-                <div className={styles.opacityPresets}>
-                  {[
-                    { id: 'both', label: 'Both' },
-                    { id: 'time', label: 'Time Only' },
-                    { id: 'bar', label: 'Bar Only' },
-                  ].map((opt) => {
-                    const currentMode = notchSettings?.idleDisplayMode ?? 'both';
-                    const isActive = currentMode === opt.id;
-                    return (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        className={`${styles.presetChipSmall} ${isActive ? styles.presetChipSmallActive : ''}`}
-                        onClick={() => {
-                          if (soundEnabled) playUiClick();
-                          onUpdateNotchSetting?.('idleDisplayMode', opt.id);
-                        }}
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className={styles.flatRow}>
-                <span className={styles.flatLabel}>Island opacity</span>
-                <div className={styles.opacityControls}>
-                  <div className={styles.opacityPresets}>
-                    {[75, 85, 95, 100].map((preset) => (
-                      <button
-                        key={preset}
-                        type="button"
-                        className={`${styles.presetChipSmall} ${islandOpacity === preset ? styles.presetChipSmallActive : ''}`}
-                        onClick={() => handleOpacityChange(preset)}
-                      >
-                        {preset}%
-                      </button>
-                    ))}
+              <div className={styles.settingsGroupCard}>
+                {/* Display Monitor (Conditional Multi-Monitor) */}
+                {displays.length > 1 && (
+                  <div className={styles.settingsRow}>
+                    <span className={styles.rowLabel}>Display monitor</span>
+                    <div className={styles.rowControl}>
+                      <div className={styles.displaySelectWrapper}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={styles.displayIcon}>
+                          <rect x="2" y="3" width="20" height="14" rx="2" />
+                          <line x1="8" y1="21" x2="16" y2="21" />
+                          <line x1="12" y1="17" x2="12" y2="21" />
+                        </svg>
+                        <select
+                          className={styles.displaySelect}
+                          onChange={handleDisplayChange}
+                          defaultValue={window.electronAPI?.store?.get('selectedDisplayId')}
+                        >
+                          {displays.map((d, i) => (
+                            <option key={d.id} value={d.id}>
+                              {d.label || `Display ${i + 1}`}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                  <div className={styles.stepperPill}>
-                    <button
-                      type="button"
-                      onClick={() => handleOpacityChange(islandOpacity - 5)}
-                      title="Decrease opacity"
-                      aria-label="Decrease opacity"
-                    >
-                      -
-                    </button>
-                    <span>{islandOpacity}%</span>
-                    <button
-                      type="button"
-                      onClick={() => handleOpacityChange(islandOpacity + 5)}
-                      title="Increase opacity"
-                      aria-label="Increase opacity"
-                    >
-                      +
-                    </button>
+                )}
+
+                {/* Idle Notch Display Mode */}
+                <div className={styles.settingsRow}>
+                  <span className={styles.rowLabel}>Idle notch display</span>
+                  <div className={styles.rowControl}>
+                    <div className={styles.segmentedControlSmall}>
+                      {[
+                        { id: 'both', label: 'Both' },
+                        { id: 'time', label: 'Time' },
+                        { id: 'bar', label: 'Bar' },
+                      ].map((opt) => {
+                        const currentMode = notchSettings?.idleDisplayMode ?? 'both';
+                        const isActive = currentMode === opt.id;
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            className={`${styles.segmentedBtnSmall} ${isActive ? styles.segmentedBtnSmallActive : ''}`}
+                            onClick={() => {
+                              if (soundEnabled) playUiClick();
+                              onUpdateNotchSetting?.('idleDisplayMode', opt.id);
+                            }}
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {displays.length > 1 && (
-                <div className={styles.flatRow}>
-                  <span className={styles.flatLabel}>Display monitor</span>
-                  <div className={styles.displaySelectWrapper}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={styles.displayIcon}>
-                      <rect x="2" y="3" width="20" height="14" rx="2" />
-                      <line x1="8" y1="21" x2="16" y2="21" />
-                      <line x1="12" y1="17" x2="12" y2="21" />
-                    </svg>
-                    <select
-                      className={styles.displaySelect}
-                      onChange={handleDisplayChange}
-                      defaultValue={window.electronAPI?.store?.get('selectedDisplayId')}
-                    >
-                      {displays.map((d, i) => (
-                        <option key={d.id} value={d.id}>
-                          {d.label || `Display ${i + 1}`}
-                        </option>
+                {/* Island Opacity (Unified Segmented Control, Dieter Rams Restraint) */}
+                <div className={styles.settingsRow}>
+                  <span className={styles.rowLabel}>Island opacity</span>
+                  <div className={styles.rowControl}>
+                    <div className={styles.segmentedControlSmall}>
+                      {[75, 85, 95, 100].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          className={`${styles.segmentedBtnSmall} ${islandOpacity === preset ? styles.segmentedBtnSmallActive : ''}`}
+                          onClick={() => handleOpacityChange(preset)}
+                        >
+                          {preset}%
+                        </button>
                       ))}
-                    </select>
+                    </div>
                   </div>
                 </div>
-              )}
+
+                {/* Top Bezel Offset */}
+                <div className={styles.settingsRow}>
+                  <span className={styles.rowLabel}>Top bezel offset</span>
+                  <div className={styles.rowControl}>
+                    <div className={styles.stepperPill}>
+                      <button
+                        type="button"
+                        className={styles.stepperBtn}
+                        onClick={() => handleTopMarginChange(-2)}
+                        title="Decrease top margin"
+                        aria-label="Decrease top margin"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                      </button>
+                      <span className={styles.stepperValue}>{topMargin}px</span>
+                      <button
+                        type="button"
+                        className={styles.stepperBtn}
+                        onClick={() => handleTopMarginChange(2)}
+                        title="Increase top margin"
+                        aria-label="Increase top margin"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                          <line x1="12" y1="5" x2="12" y2="19" />
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Horizontal Position & Polite Snap to Center */}
+                <div className={`${styles.settingsRow} ${styles.settingsRowTwoLine}`}>
+                  <div className={styles.rowLabelGroup}>
+                    <span className={styles.rowLabel}>Horizontal position</span>
+                    <span className={styles.rowSubtitle}>
+                      {Math.round(horizontalOffset) === 0
+                        ? 'Centered along monitor bezel'
+                        : `${Math.abs(Math.round(horizontalOffset))}px ${horizontalOffset > 0 ? 'offset to right' : 'offset to left'}`}
+                    </span>
+                  </div>
+                  <div className={styles.rowControl}>
+                    <button
+                      type="button"
+                      className={styles.resetActionBtn}
+                      onClick={() => {
+                        if (soundEnabled) playUiClick();
+                        onResetPosition?.();
+                      }}
+                      disabled={Math.round(horizontalOffset) === 0}
+                      title="Snap island back to center"
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="1 4 1 10 7 10" />
+                        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                      </svg>
+                      Center
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* GROUP 3: SYSTEM & CAPTURE PRIVACY */}
+            <div className={styles.settingsGroup}>
+              <div className={styles.settingsGroupHeader}>
+                <span>System & privacy</span>
+                <div className={styles.segmentedControlSmall}>
+                  {[
+                    { id: 'both', label: 'Both', active: includeInRecordings && includeInScreenshots },
+                    { id: 'recordings', label: 'Rec', active: includeInRecordings && !includeInScreenshots },
+                    { id: 'screenshots', label: 'Shot', active: !includeInRecordings && includeInScreenshots },
+                    { id: 'none', label: 'None', active: !includeInRecordings && !includeInScreenshots },
+                  ].map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      className={`${styles.segmentedBtnSmall} ${preset.active ? styles.segmentedBtnSmallActive : ''}`}
+                      onClick={() => handleCapturePreset(preset.id)}
+                      title={`Quick preset: ${preset.label}`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className={styles.settingsGroupCard}>
+                {/* Launch on Startup */}
+                <div className={styles.settingsRow}>
+                  <span className={styles.rowLabel}>Launch on Windows startup</span>
+                  <div className={styles.rowControl}>
+                    <button
+                      type="button"
+                      className={`${styles.toggleSwitch} ${openAtLogin ? styles.toggleOn : ''}`}
+                      onClick={handleStartupToggle}
+                      aria-label="Launch on Windows startup"
+                    >
+                      <div className={styles.toggleThumb} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* UI Click Sounds */}
+                <div className={styles.settingsRow}>
+                  <span className={styles.rowLabel}>UI click sounds</span>
+                  <div className={styles.rowControl}>
+                    <button
+                      type="button"
+                      className={`${styles.toggleSwitch} ${soundEnabled ? styles.toggleOn : ''}`}
+                      onClick={handleSoundToggle}
+                      aria-label="UI click sounds"
+                    >
+                      <div className={styles.toggleThumb} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Include in Screen Recordings */}
+                <div className={`${styles.settingsRow} ${styles.settingsRowTwoLine}`}>
+                  <div className={styles.rowLabelGroup}>
+                    <span className={styles.rowLabel}>Include in screen recordings</span>
+                    <span className={styles.rowSubtitle}>
+                      OBS, Discord, Zoom, Teams & Loom streams
+                    </span>
+                  </div>
+                  <div className={styles.rowControl}>
+                    <button
+                      type="button"
+                      className={`${styles.toggleSwitch} ${includeInRecordings ? styles.toggleOn : ''}`}
+                      onClick={handleToggleRecordings}
+                      aria-label="Include in screen recordings"
+                    >
+                      <div className={styles.toggleThumb} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Include in Screenshots */}
+                <div className={`${styles.settingsRow} ${styles.settingsRowTwoLine}`}>
+                  <div className={styles.rowLabelGroup}>
+                    <span className={styles.rowLabel}>Include in screenshots</span>
+                    <span className={styles.rowSubtitle}>
+                      Snipping Tool, Win+Shift+S & PrintScreen
+                    </span>
+                  </div>
+                  <div className={styles.rowControl}>
+                    <button
+                      type="button"
+                      className={`${styles.toggleSwitch} ${includeInScreenshots ? styles.toggleOn : ''}`}
+                      onClick={handleToggleScreenshots}
+                      aria-label="Include in screenshots"
+                    >
+                      <div className={styles.toggleThumb} />
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}

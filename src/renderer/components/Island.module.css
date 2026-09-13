@@ -4,11 +4,32 @@
   justify-content: flex-start;
   overflow: visible;
   position: relative;
-  cursor: default;
+  cursor: grab;
   flex-direction: column;
   margin-top: 0;
   box-sizing: border-box;
   transition: box-shadow 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  user-select: none;
+  touch-action: none;
+}
+
+.island:active {
+  cursor: grabbing;
+}
+
+/* Luminous magnetic alignment tick when island snaps to screen center */
+.magneticGuideTick {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 2.5px;
+  border-radius: 0 0 2px 2px;
+  background: #5c77bd;
+  box-shadow: 0 1px 8px rgba(92, 119, 189, 0.85), 0 0 14px rgba(92, 119, 189, 0.55);
+  pointer-events: none;
+  z-index: 10;
 }
 
 /* Concave ears flaring out into top monitor bezel */
@@ -18,6 +39,8 @@
   left: -14px;
   pointer-events: none;
   z-index: 6;
+  opacity: var(--island-opacity, 0.95);
+  transition: opacity 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .notchEarRight {
@@ -26,6 +49,12 @@
   right: -14px;
   pointer-events: none;
   z-index: 6;
+  opacity: var(--island-opacity, 0.95);
+  transition: opacity 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.earFill {
+  fill: #000000;
 }
 
 /* Inner content clipped to bottom rounded corners */

@@ -83,8 +83,20 @@ export const SPRING_INTERACTIVE = {
   mass: 0.6,
 };
 
+// Fluid liquid spring for organic dragging, rubber-banding, and magnetic snapping
+export const SPRING_LIQUID = {
+  type: 'spring',
+  stiffness: 360,
+  damping: 26,
+  mass: 0.7,
+};
+
 // Default spring alias for backward compatibility
 export const SPRING = SPRING_CONTAINER;
+
+// ── Bezel Drag & Magnetic Snap Config ─────────────────
+export const BEZEL_SNAP_THRESHOLD = 30; // px around center for magnetic snap
+export const HOVER_DWELL_DELAY_MS = 180; // ms intent buffer before waking idle notch
 
 // ── Display Foundation Tokens (Elevated Obsidian) ────
 // #08080a prevents OLED subpixel diode shutoff (no purple smearing) & Mini-LED blooming

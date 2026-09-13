@@ -154,6 +154,7 @@ export default function App() {
       <Island
         islandRef={island.islandRef}
         islandState={island.state}
+        reportBounds={island.reportBounds}
         onMouseEnter={island.handleMouseEnter}
         onMouseLeave={island.handleMouseLeave}
         onClick={island.handleClick}

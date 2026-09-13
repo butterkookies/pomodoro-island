@@ -65,6 +65,45 @@ export function playUiClick() {
   } catch {}
 }
 
+// Crisp magnetic center detent click played when island snaps back to center
+export function playSnapHaptic() {
+  try {
+    const isSoundEnabled = window.electronAPI?.store?.get('soundEffectsEnabled') ?? true;
+    if (!isSoundEnabled) return;
+
+    const ac = ctx();
+    const t = ac.currentTime;
+
+    // Transient tick (sharp mechanical pulse)
+    const osc1 = ac.createOscillator();
+    const gain1 = ac.createGain();
+    osc1.connect(gain1);
+    gain1.connect(ac.destination);
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(1500, t);
+    osc1.frequency.exponentialRampToValueAtTime(450, t + 0.012);
+    gain1.gain.setValueAtTime(0.0001, t);
+    gain1.gain.linearRampToValueAtTime(0.12, t + 0.002);
+    gain1.gain.exponentialRampToValueAtTime(0.0001, t + 0.015);
+    osc1.start(t);
+    osc1.stop(t + 0.02);
+
+    // Warm resonant body (subtle wooden/obsidian magnetic detent)
+    const osc2 = ac.createOscillator();
+    const gain2 = ac.createGain();
+    osc2.connect(gain2);
+    gain2.connect(ac.destination);
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(360, t);
+    osc2.frequency.exponentialRampToValueAtTime(200, t + 0.035);
+    gain2.gain.setValueAtTime(0.0001, t);
+    gain2.gain.linearRampToValueAtTime(0.07, t + 0.004);
+    gain2.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
+    osc2.start(t);
+    osc2.stop(t + 0.045);
+  } catch {}
+}
+
 // Gentle fluid spring sound when notch expands/contracts
 export function playNotchSpring(isExpanding = true) {
   try {
