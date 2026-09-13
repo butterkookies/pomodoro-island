@@ -18,7 +18,7 @@ import DevFeedbackOverlay from './components/DevFeedback/DevFeedbackOverlay';
 import styles from './App.module.css';
 
 // Set to true to re-enable in-app visual pin drops & dev comments overlay
-const ENABLE_DEV_FEEDBACK = false;
+const ENABLE_DEV_FEEDBACK = true;
 
 export default function App() {
   const pomodoro = usePomodoro();
