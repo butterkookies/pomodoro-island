@@ -27,7 +27,7 @@ export const STEP_INTERVAL_MS = 85;
  * @param {number} t Time in seconds
  * @returns {number[]} Array of 8 segment heights clamped between 1 and 7
  */
-export function calculateFrequencyLevels(t) {
+export function calculateFrequencyLevels(t = 0) {
   // Phase 1: Bass Kick / Low Thump (Bands 1-2: 63Hz, 160Hz)
   const kick = Math.pow(Math.max(0, Math.sin(t * 4.4)), 3.5);
   const bassRhythm = Math.sin(t * 2.2) * 1.2;
@@ -108,17 +108,23 @@ export function calculateFrequencyLevels(t) {
  * @returns {{ nextPeaks: number[], nextTimers: number[] }}
  */
 export function calculateNextPeaks(
-  currentLevels,
-  prevPeaks,
-  prevTimers,
+  currentLevels = [],
+  prevPeaks = [],
+  prevTimers = [],
   elapsedMs = STEP_INTERVAL_MS,
   holdTimeMs = HOLD_TIME_MS
 ) {
-  const nextPeaks = [...prevPeaks];
-  const nextTimers = [...prevTimers];
+  const nextPeaks =
+    Array.isArray(prevPeaks) && prevPeaks.length === BANDS
+      ? [...prevPeaks]
+      : Array(BANDS).fill(0);
+  const nextTimers =
+    Array.isArray(prevTimers) && prevTimers.length === BANDS
+      ? [...prevTimers]
+      : Array(BANDS).fill(0);
 
   for (let i = 0; i < BANDS; i++) {
-    const lvl = currentLevels[i] || 0;
+    const lvl = Array.isArray(currentLevels) ? currentLevels[i] || 0 : 0;
     if (lvl >= nextPeaks[i]) {
       // Level hits or exceeds previous peak -> latch peak and reset hold timer
       nextPeaks[i] = lvl;
@@ -168,16 +174,64 @@ export default function VfdEqualizer({ isPlaying = false, className = '' }) {
 
   const timersRef = useRef(Array(BANDS).fill(0));
   const timeRef = useRef(0);
+  const isRestingRef = useRef(!isPlaying);
 
   useEffect(() => {
     if (!isPlaying) {
-      setLevels(Array(BANDS).fill(0));
-      setPeaks(Array(BANDS).fill(0));
-      peaksRef.current = Array(BANDS).fill(0);
-      timersRef.current = Array(BANDS).fill(0);
-      timeRef.current = 0;
+      if (!isRestingRef.current) {
+        setLevels(Array(BANDS).fill(0));
+        setPeaks(Array(BANDS).fill(0));
+        peaksRef.current = Array(BANDS).fill(0);
+        timersRef.current = Array(BANDS).fill(0);
+        timeRef.current = 0;
+        isRestingRef.current = true;
+      }
       return;
     }
+
+    isRestingRef.current = false;
+
+    let intervalId = null;
+
+    const stopAnimation = () => {
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const startAnimation = () => {
+      stopAnimation();
+      let t = timeRef.current;
+      intervalId = setInterval(() => {
+        t += STEP_INTERVAL_MS / 1000;
+        timeRef.current = t;
+
+        const nextLevels = calculateFrequencyLevels(t);
+        const { nextPeaks, nextTimers } = calculateNextPeaks(
+          nextLevels,
+          peaksRef.current,
+          timersRef.current,
+          STEP_INTERVAL_MS,
+          HOLD_TIME_MS
+        );
+
+        peaksRef.current = nextPeaks;
+        timersRef.current = nextTimers;
+
+        setLevels(nextLevels);
+        setPeaks(nextPeaks);
+      }, STEP_INTERVAL_MS);
+    };
+
+    const applyReducedMotion = () => {
+      stopAnimation();
+      const calmLevels = [2, 3, 4, 3, 3, 2, 2, 1];
+      peaksRef.current = calmLevels;
+      timersRef.current = Array(BANDS).fill(0);
+      setLevels(calmLevels);
+      setPeaks(calmLevels);
+    };
 
     const mediaQuery =
       typeof window !== 'undefined' && window.matchMedia
@@ -185,35 +239,24 @@ export default function VfdEqualizer({ isPlaying = false, className = '' }) {
         : null;
 
     if (mediaQuery?.matches) {
-      const calmLevels = [2, 3, 4, 3, 3, 2, 2, 1];
-      setLevels(calmLevels);
-      setPeaks(calmLevels);
-      return;
+      applyReducedMotion();
+    } else {
+      startAnimation();
     }
 
-    let t = timeRef.current;
-    const interval = setInterval(() => {
-      t += STEP_INTERVAL_MS / 1000;
-      timeRef.current = t;
+    const handleMotionChange = (e) => {
+      if (e.matches) {
+        applyReducedMotion();
+      } else {
+        startAnimation();
+      }
+    };
 
-      const nextLevels = calculateFrequencyLevels(t);
-      const { nextPeaks, nextTimers } = calculateNextPeaks(
-        nextLevels,
-        peaksRef.current,
-        timersRef.current,
-        STEP_INTERVAL_MS,
-        HOLD_TIME_MS
-      );
-
-      peaksRef.current = nextPeaks;
-      timersRef.current = nextTimers;
-
-      setLevels(nextLevels);
-      setPeaks(nextPeaks);
-    }, STEP_INTERVAL_MS);
+    mediaQuery?.addEventListener?.('change', handleMotionChange);
 
     return () => {
-      clearInterval(interval);
+      stopAnimation();
+      mediaQuery?.removeEventListener?.('change', handleMotionChange);
     };
   }, [isPlaying]);
 
