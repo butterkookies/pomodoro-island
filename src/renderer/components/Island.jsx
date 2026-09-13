@@ -112,41 +112,52 @@ export default function Island({
       ? window.matchMedia('(prefers-reduced-motion: reduce)')
       : null;
 
-    if (mediaQuery?.matches) {
-      islandRef?.current?.style.setProperty('--audio-pulse', '0.5');
-      return () => {
-        islandRef?.current?.style.setProperty('--audio-pulse', '0');
-      };
-    }
+    let frameId = null;
 
-    let frameId;
-    let startTime = performance.now();
-    const animatePulse = (currentTime) => {
-      const elapsed = (currentTime - startTime) / 1000;
-      // Smooth rhythmic pulse: composite sine waves simulating musical breathing
-      const pulse = 0.5 + 0.35 * Math.sin(elapsed * 4.2) + 0.15 * Math.sin(elapsed * 8.4);
-      const clampedPulse = Math.max(0, Math.min(1, pulse));
-      islandRef?.current?.style.setProperty('--audio-pulse', clampedPulse.toFixed(3));
+    const stopAnimation = (fallbackValue = '0') => {
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId);
+        frameId = null;
+      }
+      islandRef?.current?.style.setProperty('--audio-pulse', fallbackValue);
+    };
+
+    const startAnimation = () => {
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId);
+        frameId = null;
+      }
+      const startTime = performance.now();
+      const animatePulse = (currentTime) => {
+        const elapsed = (currentTime - startTime) / 1000;
+        // Smooth rhythmic pulse: composite sine waves simulating musical breathing
+        const pulse = 0.5 + 0.35 * Math.sin(elapsed * 4.2) + 0.15 * Math.sin(elapsed * 8.4);
+        const clampedPulse = Math.max(0, Math.min(1, pulse));
+        islandRef?.current?.style.setProperty('--audio-pulse', clampedPulse.toFixed(3));
+        frameId = requestAnimationFrame(animatePulse);
+      };
       frameId = requestAnimationFrame(animatePulse);
     };
-    frameId = requestAnimationFrame(animatePulse);
+
+    if (mediaQuery?.matches) {
+      stopAnimation('0.5');
+    } else {
+      startAnimation();
+    }
 
     const handleMotionChange = (e) => {
       if (e.matches) {
-        cancelAnimationFrame(frameId);
-        islandRef?.current?.style.setProperty('--audio-pulse', '0.5');
+        stopAnimation('0.5');
       } else {
-        startTime = performance.now();
-        frameId = requestAnimationFrame(animatePulse);
+        startAnimation();
       }
     };
 
     mediaQuery?.addEventListener?.('change', handleMotionChange);
 
     return () => {
-      cancelAnimationFrame(frameId);
       mediaQuery?.removeEventListener?.('change', handleMotionChange);
-      islandRef?.current?.style.setProperty('--audio-pulse', '0');
+      stopAnimation('0');
     };
   }, [isMediaActive, islandRef]);
 

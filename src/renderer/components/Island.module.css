@@ -27,12 +27,12 @@
       calc(54px + var(--audio-pulse, 0) * 32px)
       calc(-6px + var(--audio-pulse, 0) * 6px)
       rgba(var(--media-dominant-rgb, 92, 119, 189), calc(0.18 + var(--audio-pulse, 0) * 0.14));
-  transition: box-shadow 300ms ease;
+  transition: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .islandMediaActive {
-    --audio-pulse: 0.5;
+    --audio-pulse: 0.5 !important;
     transition: none;
   }
 }
