@@ -97,6 +97,9 @@ export default function Island({
   notchSettings,
   onUpdateNotchSetting,
   onResetNotchSettings,
+  // Accent theme
+  accentTheme,
+  onSetAccentTheme,
   // Onboarding
   isOnboarding = false,
   onCompleteOnboarding,
@@ -168,6 +171,22 @@ export default function Island({
     };
   }, [isMediaActive, islandRef]);
 
+  const [expandedContentHeight, setExpandedContentHeight] = useState(null);
+
+  // Reset measured height when tab or island state changes so base calculations take immediate priority
+  useEffect(() => {
+    setExpandedContentHeight(null);
+  }, [activeTab, islandState]);
+
+  const handleContentHeightChange = useCallback((newHeight) => {
+    if (typeof newHeight === 'number' && newHeight > 50) {
+      setExpandedContentHeight((prev) => {
+        if (prev && Math.abs(prev - newHeight) < 2) return prev;
+        return newHeight;
+      });
+    }
+  }, []);
+
   // Dynamic Island dimensions per state
   function getDimensions() {
     if (isOnboarding) {
@@ -181,14 +200,21 @@ export default function Island({
       return { width, height: notchSettings?.idleHeight ?? 32 };
     }
     if (islandState === 'compact') {
-      return { width: nowPlaying?.isPlaying ? 480 : 460, height: 52 };
+      const isMedia = Boolean(nowPlaying?.isPlaying && nowPlaying?.title);
+      return { width: isMedia ? 480 : 460, height: 52 };
     }
 
-    // Expanded state
+    // Expanded state — safe boundary bounded within Electron overlay (460px max)
     const width = 480;
+    const MAX_EXPANDED_HEIGHT = 420;
+
     if (activeTab === 'timer') {
       const isBreak = pomodoroState === 'SHORT_BREAK' || pomodoroState === 'LONG_BREAK';
-      return { width, height: isBreak && wellnessPrompt ? 284 : 264 };
+      let baseHeight = 264;
+      if (isOvertime) baseHeight += 44; // Flow overtime "Wrap up & start break" button + margin
+      if (isBreak && wellnessPrompt) baseHeight += 28;
+      const computed = expandedContentHeight ? Math.max(baseHeight, expandedContentHeight) : baseHeight;
+      return { width, height: Math.min(MAX_EXPANDED_HEIGHT, computed) };
     }
     if (activeTab === 'tasks') return { width, height: 280 };
     if (activeTab === 'audio' || activeTab === 'music') {
@@ -199,7 +225,11 @@ export default function Island({
 
     // Timer tab fallback
     const isBreak = pomodoroState === 'SHORT_BREAK' || pomodoroState === 'LONG_BREAK';
-    return { width, height: isBreak && wellnessPrompt ? 284 : 264 };
+    let baseHeight = 264;
+    if (isOvertime) baseHeight += 44;
+    if (isBreak && wellnessPrompt) baseHeight += 28;
+    const computed = expandedContentHeight ? Math.max(baseHeight, expandedContentHeight) : baseHeight;
+    return { width, height: Math.min(MAX_EXPANDED_HEIGHT, computed) };
   }
 
   const dims = getDimensions();
@@ -593,9 +623,12 @@ export default function Island({
                 notchSettings={notchSettings}
                 onUpdateNotchSetting={onUpdateNotchSetting}
                 onResetNotchSettings={onResetNotchSettings}
+                accentTheme={accentTheme}
+                onSetAccentTheme={onSetAccentTheme}
                 horizontalOffset={currentOffsetX}
                 onResetPosition={handleResetPosition}
                 onReplayOnboarding={onReplayOnboarding}
+                onContentHeightChange={handleContentHeightChange}
               />
             </motion.div>
           )}

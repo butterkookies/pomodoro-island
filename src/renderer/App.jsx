@@ -9,6 +9,7 @@ import { useTasks } from './hooks/useTasks';
 import { useStats } from './hooks/useStats';
 import { useNotchSettings } from './hooks/useNotchSettings';
 import { useNowPlaying } from './hooks/useNowPlaying';
+import { useAccentTheme } from './hooks/useAccentTheme';
 import { playReminder, getWellnessPrompt } from './utils/soundManager';
 import { getCurrentSound, play as ambientPlay, stop as ambientStop } from './utils/ambientPlayer';
 import { notifyPhaseComplete, notifyReminder } from './utils/notificationManager';
@@ -25,6 +26,7 @@ export default function App() {
   const stats = useStats();
   const notch = useNotchSettings();
   const nowPlaying = useNowPlaying();
+  const { themeId: accentTheme, setAccentTheme } = useAccentTheme();
   const [wellnessPrompt, setWellnessPrompt] = useState(() => getWellnessPrompt());
   const [isFeedbackActive, setIsFeedbackActive] = useState(false);
 
@@ -269,6 +271,9 @@ export default function App() {
         notchSettings={notch.settings}
         onUpdateNotchSetting={notch.updateSetting}
         onResetNotchSettings={notch.resetToDefaults}
+        // Accent theme props
+        accentTheme={accentTheme}
+        onSetAccentTheme={setAccentTheme}
         // Onboarding
         isOnboarding={isOnboarding}
         onCompleteOnboarding={() => handleCompleteOnboarding(false)}
