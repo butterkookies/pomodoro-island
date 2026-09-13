@@ -150,6 +150,43 @@
   line-height: 1;
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
+  border-bottom: 1.5px dotted transparent;
+  transition: border-color 140ms ease;
+}
+
+.heroTimeEditable {
+  cursor: text;
+}
+
+.heroTimeEditable:hover {
+  border-bottom: 1.5px dotted rgba(255, 255, 255, 0.35);
+}
+
+.heroTimeInput {
+  font-family: var(--font-timer);
+  font-size: 46px;
+  font-weight: 600;
+  letter-spacing: -0.020em;
+  color: #ffffff;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  text-align: center;
+  outline: 2px solid rgba(92, 119, 189, 0.70);
+  outline-offset: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  border-radius: 8px;
+  width: 170px;
+  height: 48px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  caret-color: #ffffff;
+}
+
+.heroTimeInput:focus {
+  outline: 2px solid rgba(92, 119, 189, 0.70);
+  outline-offset: 4px;
 }
 
 .phaseSubtitle {
@@ -1011,6 +1048,40 @@
   font-feature-settings: 'tnum' 1;
   color: var(--text-primary);
   padding: 0 4px;
+  border-bottom: 1px dotted transparent;
+  transition: all 120ms ease;
+}
+
+.stepperValueEditable {
+  cursor: text;
+}
+
+.stepperValueEditable:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.35);
+  border-radius: 3px;
+}
+
+.stepperValueInput {
+  width: 40px;
+  height: 20px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  text-align: center;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  border: 1px solid var(--accent-bar);
+  outline: none;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.stepperValueInput:focus {
+  border-color: var(--accent-bar);
 }
 
 /* ── Segmented Pill Control (Harmony across chips & modes) ── */

@@ -129,7 +129,6 @@ export default function Island({
     const isBreak = pomodoroState === 'SHORT_BREAK' || pomodoroState === 'LONG_BREAK';
     return { width, height: isBreak && wellnessPrompt ? 284 : 264 };
   }
-  const getDims = getDimensions;
 
   const dims = getDimensions();
   const radius =

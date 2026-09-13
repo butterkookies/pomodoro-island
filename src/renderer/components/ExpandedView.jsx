@@ -11,6 +11,7 @@ import {
   getVolume,
 } from '../utils/ambientPlayer';
 import { playUiClick } from '../utils/soundManager';
+import { parseTimeInput } from '../utils/timeInputParser';
 
 const TAB_ORDER = ['timer', 'tasks', 'audio', 'stats', 'settings'];
 
@@ -96,6 +97,123 @@ export default function ExpandedView({
   const [newNoteText, setNewNoteText] = useState('');
   const [customTimerName, setCustomTimerName] = useState('');
   const [customTimerMins, setCustomTimerMins] = useState('');
+
+  // Hero time inline editing
+  const [isEditingHeroTime, setIsEditingHeroTime] = useState(false);
+  const [heroTimeInput, setHeroTimeInput] = useState('');
+  const heroInputRef = useRef(null);
+  const isCancellingHeroRef = useRef(false);
+  const committingHeroRef = useRef(false);
+
+  // Settings steppers inline editing ('FOCUS' | 'SHORT_BREAK' | 'LONG_BREAK' | null)
+  const [editingStepper, setEditingStepper] = useState(null);
+  const [stepperInputVal, setStepperInputVal] = useState('');
+  const stepperInputRef = useRef(null);
+  const isCancellingStepperRef = useRef(false);
+  const committingStepperRef = useRef(false);
+
+  useEffect(() => {
+    if (isEditingHeroTime && heroInputRef.current) {
+      heroInputRef.current.focus();
+      heroInputRef.current.select();
+    }
+  }, [isEditingHeroTime]);
+
+  useEffect(() => {
+    if (editingStepper && stepperInputRef.current) {
+      stepperInputRef.current.focus();
+      stepperInputRef.current.select();
+    }
+  }, [editingStepper]);
+
+  useEffect(() => {
+    if (isRunning && isEditingHeroTime) {
+      setIsEditingHeroTime(false);
+    }
+  }, [isRunning, isEditingHeroTime]);
+
+  const handleStartEditHeroTime = () => {
+    if (isRunning) return;
+    const currentMinutes = Math.round(
+      ((durations && (durations[pomodoroState] || durations.FOCUS)) || 25 * 60 * 1000) / 60000
+    );
+    setHeroTimeInput(String(currentMinutes));
+    isCancellingHeroRef.current = false;
+    setIsEditingHeroTime(true);
+  };
+
+  const handleCommitHeroTime = () => {
+    if (isCancellingHeroRef.current) {
+      isCancellingHeroRef.current = false;
+      return;
+    }
+    if (committingHeroRef.current) return;
+    committingHeroRef.current = true;
+
+    const ms = parseTimeInput(heroTimeInput);
+    if (ms) {
+      const targetPhase = (pomodoroState === 'SHORT_BREAK' || pomodoroState === 'LONG_BREAK') ? pomodoroState : 'FOCUS';
+      onSetDuration?.(targetPhase, ms);
+      onReset?.();
+    }
+    setIsEditingHeroTime(false);
+    setTimeout(() => {
+      committingHeroRef.current = false;
+    }, 50);
+  };
+
+  const handleHeroKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleCommitHeroTime();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      isCancellingHeroRef.current = true;
+      setIsEditingHeroTime(false);
+    }
+  };
+
+  const handleStartEditStepper = (phase, currentMinutes) => {
+    setStepperInputVal(String(currentMinutes));
+    isCancellingStepperRef.current = false;
+    setEditingStepper(phase);
+  };
+
+  const handleCommitStepper = () => {
+    if (isCancellingStepperRef.current) {
+      isCancellingStepperRef.current = false;
+      return;
+    }
+    if (committingStepperRef.current) return;
+    committingStepperRef.current = true;
+
+    const currentEditing = editingStepper;
+    if (currentEditing) {
+      const isFocus = currentEditing === 'FOCUS';
+      const ms = parseTimeInput(stepperInputVal, {
+        minMinutes: 1,
+        maxMinutes: isFocus ? 180 : 60,
+      });
+      if (ms) {
+        onSetDuration?.(currentEditing, ms);
+      }
+    }
+    setEditingStepper(null);
+    setTimeout(() => {
+      committingStepperRef.current = false;
+    }, 50);
+  };
+
+  const handleStepperKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleCommitStepper();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      isCancellingStepperRef.current = true;
+      setEditingStepper(null);
+    }
+  };
 
   // Directional tab switching mechanics
   const activeTabIndex = getTabIndex(activeTab);
@@ -385,7 +503,26 @@ export default function ExpandedView({
           <div className={styles.timerTab}>
             {/* Hero Countdown Readout */}
             <div className={styles.heroTimer}>
-              <span className={styles.heroTime}>{timeDisplay}</span>
+              {isEditingHeroTime ? (
+                <input
+                  ref={heroInputRef}
+                  type="text"
+                  className={styles.heroTimeInput}
+                  value={heroTimeInput}
+                  onChange={(e) => setHeroTimeInput(e.target.value)}
+                  onKeyDown={handleHeroKeyDown}
+                  onBlur={handleCommitHeroTime}
+                  placeholder="mm:ss"
+                />
+              ) : (
+                <span
+                  className={`${styles.heroTime} ${!isRunning ? styles.heroTimeEditable : ''}`}
+                  onClick={handleStartEditHeroTime}
+                  title={!isRunning ? 'Click to edit duration' : undefined}
+                >
+                  {timeDisplay}
+                </span>
+              )}
               <div className={styles.phaseSubtitle}>
                 <span
                   className={styles.statusDot}
@@ -848,9 +985,28 @@ export default function ExpandedView({
                           <line x1="5" y1="12" x2="19" y2="12" />
                         </svg>
                       </button>
-                      <span className={styles.stepperValue}>
-                        {Math.round((durations.FOCUS || 25 * 60 * 1000) / 60000)}m
-                      </span>
+                      {editingStepper === 'FOCUS' ? (
+                        <input
+                          ref={stepperInputRef}
+                          type="text"
+                          className={styles.stepperValueInput}
+                          value={stepperInputVal}
+                          onChange={(e) => setStepperInputVal(e.target.value)}
+                          onKeyDown={handleStepperKeyDown}
+                          onBlur={handleCommitStepper}
+                        />
+                      ) : (
+                        <span
+                          className={`${styles.stepperValue} ${styles.stepperValueEditable}`}
+                          onClick={() => {
+                            const mins = Math.round((durations.FOCUS || 25 * 60 * 1000) / 60000);
+                            handleStartEditStepper('FOCUS', mins);
+                          }}
+                          title="Click to edit focus duration"
+                        >
+                          {Math.round((durations.FOCUS || 25 * 60 * 1000) / 60000)}m
+                        </span>
+                      )}
                       <button
                         type="button"
                         className={styles.stepperBtn}
@@ -889,9 +1045,28 @@ export default function ExpandedView({
                           <line x1="5" y1="12" x2="19" y2="12" />
                         </svg>
                       </button>
-                      <span className={styles.stepperValue}>
-                        {Math.round((durations.SHORT_BREAK || 5 * 60 * 1000) / 60000)}m
-                      </span>
+                      {editingStepper === 'SHORT_BREAK' ? (
+                        <input
+                          ref={stepperInputRef}
+                          type="text"
+                          className={styles.stepperValueInput}
+                          value={stepperInputVal}
+                          onChange={(e) => setStepperInputVal(e.target.value)}
+                          onKeyDown={handleStepperKeyDown}
+                          onBlur={handleCommitStepper}
+                        />
+                      ) : (
+                        <span
+                          className={`${styles.stepperValue} ${styles.stepperValueEditable}`}
+                          onClick={() => {
+                            const mins = Math.round((durations.SHORT_BREAK || 5 * 60 * 1000) / 60000);
+                            handleStartEditStepper('SHORT_BREAK', mins);
+                          }}
+                          title="Click to edit short break duration"
+                        >
+                          {Math.round((durations.SHORT_BREAK || 5 * 60 * 1000) / 60000)}m
+                        </span>
+                      )}
                       <button
                         type="button"
                         className={styles.stepperBtn}
@@ -930,9 +1105,28 @@ export default function ExpandedView({
                           <line x1="5" y1="12" x2="19" y2="12" />
                         </svg>
                       </button>
-                      <span className={styles.stepperValue}>
-                        {Math.round((durations.LONG_BREAK || 15 * 60 * 1000) / 60000)}m
-                      </span>
+                      {editingStepper === 'LONG_BREAK' ? (
+                        <input
+                          ref={stepperInputRef}
+                          type="text"
+                          className={styles.stepperValueInput}
+                          value={stepperInputVal}
+                          onChange={(e) => setStepperInputVal(e.target.value)}
+                          onKeyDown={handleStepperKeyDown}
+                          onBlur={handleCommitStepper}
+                        />
+                      ) : (
+                        <span
+                          className={`${styles.stepperValue} ${styles.stepperValueEditable}`}
+                          onClick={() => {
+                            const mins = Math.round((durations.LONG_BREAK || 15 * 60 * 1000) / 60000);
+                            handleStartEditStepper('LONG_BREAK', mins);
+                          }}
+                          title="Click to edit long break duration"
+                        >
+                          {Math.round((durations.LONG_BREAK || 15 * 60 * 1000) / 60000)}m
+                        </span>
+                      )}
                       <button
                         type="button"
                         className={styles.stepperBtn}
